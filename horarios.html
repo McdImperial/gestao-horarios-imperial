@@ -44,6 +44,8 @@ table.g{border-collapse:separate;border-spacing:0;width:100%}
 .bar.err{background:var(--err);outline:2px solid #ffb3ad}
 .bar.warn{background:#c98a00}
 .bar .gp{position:absolute;top:0;bottom:0;background:repeating-linear-gradient(45deg,#fff,#fff 3px,#e5e5e5 3px,#e5e5e5 6px);opacity:.92;border-left:1px solid #0003;border-right:1px solid #0003}
+.ed{border:0;background:none;cursor:pointer;color:var(--mut);padding:0 4px 0 0}.ed:hover{color:var(--red)}
+.bar{cursor:copy}.bar .gp{cursor:pointer}.bar .gp .rz{width:6px}.bar .gp .rz.r{right:0}
 .bar .rz{position:absolute;top:0;bottom:0;width:7px;cursor:ew-resize}
 .bar .rz.l{left:0}.bar .rz.r{right:0}
 .bar .tx{position:relative;z-index:2;pointer-events:none;text-shadow:0 0 3px #0008}
@@ -222,16 +224,16 @@ function rDia(){
     let bars='';
     ts.forEach(t=>{
       const s=(Date.parse(t.inicio)-ax0)/36e5*PX,e=(Date.parse(t.fim)-ax0)/36e5*PX,wd=Math.max(e-s,8);
-      const pz=[[t.pausa_inicio,t.pausa_fim],[t.pausa2_inicio,t.pausa2_fim]].filter(x=>x[0]).map(x=>`<span class="gp" data-tip="Pausa ${hhmm(new Date(x[0]))}–${hhmm(new Date(x[1]))}" style="left:${(Date.parse(x[0])-Date.parse(t.inicio))/36e5*PX}px;width:${(Date.parse(x[1])-Date.parse(x[0]))/36e5*PX}px"></span>`).join('');
+      const pz=[[t.pausa_inicio,t.pausa_fim],[t.pausa2_inicio,t.pausa2_fim]].map((x,ix)=>x[0]?`<span class="gp" data-n="${ix+1}" data-tip="Pausa ${hhmm(new Date(x[0]))}–${hhmm(new Date(x[1]))}${canEdit()?'\nClica para remover · arrasta para mover':''}" style="left:${(Date.parse(x[0])-Date.parse(t.inicio))/36e5*PX}px;width:${(Date.parse(x[1])-Date.parse(x[0]))/36e5*PX}px">${canEdit()?'<i class="rz r"></i>':''}</span>`:'').join('');
       for(let i=0;i<48;i++){const sl=ax0+i*18e5;if(Date.parse(t.inicio)<=sl&&Date.parse(t.fim)>sl){const inP=[[t.pausa_inicio,t.pausa_fim],[t.pausa2_inicio,t.pausa2_fim]].some(x=>x[0]&&Date.parse(x[0])<=sl&&Date.parse(x[1])>sl);if(!inP)cov[i]++}}
       const c=t.codigo&&S.tipos[t.codigo];
       bars+=`<div class="bar ${w==='erro'?'err':w==='aviso'?'warn':''}" data-t="${t.id}" style="left:${s}px;width:${wd}px;${!w&&c?'background:'+c.cor+';color:'+c.cor_texto:''}">${canEdit()?'<i class="rz l"></i><i class="rz r"></i>':''}${pz}<span class="tx">${hhmm(new Date(t.inicio))}–${hhmm(new Date(t.fim))} · ${fmtHrs(horas(t))}h${t.codigo?' · '+esc(t.codigo):''}</span></div>`});
     if(a){const c=S.tipos[a.tipo]||{};bars+=`<span class="chip" style="background:${c.cor||'#eee'};color:${c.cor_texto||'inherit'}" data-tip="${esc(c.nome||a.tipo)}">${esc(a.tipo)}</span>`}
     const sym=w==='erro'?'<span class="sym e" data-tip="'+esc(vs.map(v=>(v.nivel==='erro'?'✕ ':'! ')+v.mensagem).join('\n'))+'">✕</span>':w?'<span class="sym w" data-tip="'+esc(vs.map(v=>'! '+v.mensagem).join('\n'))+'">!</span>':ts.length?'<span class="sym o">✓</span>':'';
-    return `<tr data-f="${f.id}"><td class="nm" title="${esc(f.nome)}">${esc(f.nome)}</td><td class="dsp">${dtxt}</td><td class="alr">${sym}</td><td><div class="tl" data-f="${f.id}">${hours}${bars}</div></td></tr>`}).join('');
+    return `<tr data-f="${f.id}"><td class="nm" title="${esc(f.nome)}">${canEdit()&&ts.length?`<button class="ed" data-ed="${ts[0].id}" title="Editar horas">✎</button>`:''}${esc(f.nome)}</td><td class="dsp">${dtxt}</td><td class="alr">${sym}</td><td><div class="tl" data-f="${f.id}">${hours}${bars}</div></td></tr>`}).join('');
   const covr=cov.map((n,i)=>`<span class="${n<(S.rules.cobertura_min||2)?'c0':n<(S.rules.cobertura_min||2)+2?'c1':'c2'}" data-tip="${p2((OP+Math.floor(i/2))%24)}:${i%2?'30':'00'} · ${n} pessoa(s)">${n}</span>`).join('');
   return `<div class="days">${days}</div>
-  <div class="legend"><span><i style="background:var(--bar)"></i>Turno</span><span><i style="background:repeating-linear-gradient(45deg,#fff,#fff 3px,#ddd 3px,#ddd 6px)"></i>Pausa (até 2)</span><span><i style="background:var(--err)"></i>Erro</span><span><i style="background:#c98a00"></i>Alerta</span>${canEdit()?'<span>Arrasta a barra ou as pontas (passos de 30 min) · clica para editar</span>':'<span>Só leitura</span>'}
+  <div class="legend"><span><i style="background:var(--bar)"></i>Turno</span><span><i style="background:repeating-linear-gradient(45deg,#fff,#fff 3px,#ddd 3px,#ddd 6px)"></i>Pausa (até 2)</span><span><i style="background:var(--err)"></i>Erro</span><span><i style="background:#c98a00"></i>Alerta</span>${canEdit()?'<span>Clica na barra para marcar pausa (até 2) · clica na pausa para a remover · arrasta barra, pontas ou pausa (30 min) · ✎ edita as horas</span>':'<span>Só leitura</span>'}
   <span class="sp"></span>${canEdit()?'<button class="btn" id="badd">+ Turno</button>':''}</div>
   <div class="card"><table class="g"><thead><tr><th class="nm">Funcionário</th><th class="dsp">Disponib.</th><th class="alr">⚠</th><th><div class="tl" style="height:22px;background:none">${head}</div></th></tr></thead><tbody>${rows||'<tr><td colspan="4" class="empty">Sem turnos neste dia.</td></tr>'}
   <tr class="cov"><td class="nm"><b>Pessoas em loja</b></td><td></td><td></td><td><div class="covrow">${covr}</div></td></tr></tbody></table></div>`;
@@ -241,23 +243,43 @@ function rDia(){
 function bindDia(){
   document.querySelectorAll('.day').forEach(b=>b.onclick=()=>{S.dia=+b.dataset.d;render()});
   const add=$('#badd');if(add)add.onclick=()=>openEd(null);
+  document.querySelectorAll('[data-ed]').forEach(b=>b.onclick=()=>openEd(S.turnos.find(x=>x.id===b.dataset.ed)));
+  const AX0=()=>lisbon(diaDe(S.dia),OP,0).getTime(),HALF=18e5,snap=ms=>Math.round(ms/HALF)*HALF;
   document.querySelectorAll('.bar').forEach(el=>{
     const t=S.turnos.find(x=>x.id===el.dataset.t);if(!t)return;
     el.addEventListener('pointerdown',e=>{
       if(!canEdit()||e.button)return;
-      const mode=e.target.classList.contains('l')?'l':e.target.classList.contains('r')?'r':'m';
-      const x0=e.clientX,ini=Date.parse(t.inicio),fim=Date.parse(t.fim);let dm=0,moved=false;
+      const gp=e.target.closest('.gp'),rz=e.target.classList.contains('rz')?(e.target.classList.contains('l')?'l':'r'):null;
+      const x0=e.clientX,ini=Date.parse(t.inicio),fim=Date.parse(t.fim);let moved=false,res=null;
+      const pz=pausas(t);
       el.setPointerCapture(e.pointerId);
-      const mv=ev=>{const d=ev.clientX-x0;if(Math.abs(d)>3)moved=true;dm=Math.round(d/40*2)*18e5;if(!moved)return;
-        let ni=ini+(mode!=='r'?dm:0),nf=fim+(mode!=='l'?dm:0);if(nf-ni<18e5){if(mode==='l')ni=nf-18e5;else nf=ni+18e5}
-        const ax0=lisbon(diaDe(S.dia),OP,0).getTime();el.style.left=(ni-ax0)/36e5*40+'px';el.style.width=(nf-ni)/36e5*40+'px';el.dataset.ni=ni;el.dataset.nf=nf};
+      const mv=ev=>{const d=ev.clientX-x0;if(Math.abs(d)>3)moved=true;if(!moved)return;const dm=Math.round(d/40*2)*HALF,ax=AX0();
+        if(gp){const n=+gp.dataset.n-1,p=pz[n];let ps=p[0],pe=p[1];
+          if(rz==='r')pe=Math.max(ps+HALF,Math.min(fim,pe+dm));else{const du=pe-ps;ps=Math.max(ini,Math.min(fim-du,ps+dm));pe=ps+du}
+          gp.style.left=(ps-ini)/36e5*40+'px';gp.style.width=(pe-ps)/36e5*40+'px';res={n,ps,pe};return}
+        let ni=ini+(rz!=='r'?dm:0),nf=fim+(rz!=='l'?dm:0);if(nf-ni<HALF){if(rz==='l')ni=nf-HALF;else nf=ni+HALF}
+        el.style.left=(ni-ax)/36e5*40+'px';el.style.width=(nf-ni)/36e5*40+'px';res={ni,nf}};
       const up=async()=>{el.removeEventListener('pointermove',mv);el.removeEventListener('pointerup',up);
-        if(!moved){openEd(t);return}
-        const ni=+el.dataset.ni,nf=+el.dataset.nf;if(!ni)return render();
-        await saveTurno(t,{inicio:new Date(ni),fim:new Date(nf)},true)};
+        if(!moved){ // clique simples
+          if(gp){pz.splice(+gp.dataset.n-1,1);return savePausas(t,pz)}
+          const box=el.getBoundingClientRect(),at=ini+(e.clientX-box.left)/40*36e5;
+          let ps=Math.max(ini,Math.min(snap(at)-0,fim-HALF)),pe=ps+HALF;
+          if(pz.length>=2)return toast('Já tem 2 pausas. Clica numa pausa para a remover.',true);
+          if(pz.some(p=>ps<p[1]&&pe>p[0])){const p=pz.find(p=>ps<p[1]&&pe>p[0]);ps=ps<p[0]?p[0]-HALF:p[1];pe=ps+HALF}
+          if(ps<ini||pe>fim||pz.some(p=>ps<p[1]&&pe>p[0]))return toast('Não há espaço para a pausa aqui.',true);
+          pz.push([ps,pe]);return savePausas(t,pz)}
+        if(!res)return render();
+        if(gp){pz[res.n]=[res.ps,res.pe];return savePausas(t,pz)}
+        await saveTurno(t,{inicio:new Date(res.ni),fim:new Date(res.nf)},rz==null)};
       el.addEventListener('pointermove',mv);el.addEventListener('pointerup',up)});
   });
 }
+const pausas=t=>[[t.pausa_inicio,t.pausa_fim],[t.pausa2_inicio,t.pausa2_fim]].filter(x=>x[0]).map(x=>[Date.parse(x[0]),Date.parse(x[1])]);
+async function savePausas(t,pz){
+  pz=pz.slice().sort((a,b)=>a[0]-b[0]);const D=x=>x?new Date(x):null;
+  return rpcSave({p_turno:t.id,p_func:t.funcionario_id,p_inicio:new Date(t.inicio),p_fim:new Date(t.fim),
+    p_pausa_ini:D(pz[0]&&pz[0][0]),p_pausa_fim:D(pz[0]&&pz[0][1]),p_pausa2_ini:D(pz[1]&&pz[1][0]),p_pausa2_fim:D(pz[1]&&pz[1][1]),
+    p_modelo:t.modelo,p_versao:t.versao,p_codigo:t.codigo})}
 
 /* ---------- gravar ---------- */
 async function saveTurno(t,ch,shift){
