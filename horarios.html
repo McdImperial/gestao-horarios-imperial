@@ -95,11 +95,14 @@ dialog::backdrop{background:#0005}
   <button class="btn ok" id="bpub">Publicar</button>
 </header>
 <div class="tabs" role="tablist">
-  <button class="tab" role="tab" data-t="dia">Planeamento diário</button>
+  <button class="tab" role="tab" data-t="dash">Dashboard</button>
   <button class="tab" role="tab" data-t="sem">Escala semanal</button>
+  <button class="tab" role="tab" data-t="dia">Planeamento diário</button>
   <button class="tab" role="tab" data-t="stf">Staffing</button>
-  <button class="tab" role="tab" data-t="hist">Histórico</button>
   <button class="tab" role="tab" data-t="func">Funcionários</button>
+  <button class="tab" role="tab" data-t="disp">Disponibilidades e ausências</button>
+  <button class="tab" role="tab" data-t="hist">Histórico</button>
+  <button class="tab" role="tab" data-t="cfg">Configurações</button>
 </div>
 <main id="main"><div class="empty">A carregar…</div></main>
 <div id="tip"></div><div id="toast"></div>
@@ -190,6 +193,9 @@ function render(){
   $('#bvalid').disabled=!canEdit()||!w||w.estado==='publicado';$('#bpub').disabled=!canPub()||!w||w.estado==='publicado';
   const m=$('#main');
   if(S.tab==='func')return m.innerHTML=rFunc();
+  if(S.tab==='cfg'){m.innerHTML='<div class="empty">A carregar…</div>';return rCfg()}
+  if(S.tab==='disp'){m.innerHTML=rDisp();return bindDisp()}
+  if(S.tab==='dash')return m.innerHTML=rDash();
   if(S.tab==='stf'){m.innerHTML='<div class="empty">A carregar…</div>';return rStaff()}
   if(S.tab==='hist'){m.innerHTML='<div class="empty">A carregar…</div>';return rHist()}
   if(!w)return m.innerHTML='<div class="empty">Ainda não há semanas. '+(canEdit()?'Cria a primeira em «Nova semana».':'')+'</div>';
@@ -362,6 +368,88 @@ function openEd(t){
     if(r.error)toast(r.error.message,true);else toast('Turno removido');await loadSemana()};
   d.showModal()}
 
+/* ---------- Dashboard ---------- */
+function rDash(){
+  const w=S.sem,E=S.val.filter(v=>v.nivel==='erro'),A=S.val.filter(v=>v.nivel==='aviso');
+  const por=l=>{const o={};l.forEach(v=>o[v.codigo]=(o[v.codigo]||0)+1);return Object.entries(o).sort((a,b)=>b[1]-a[1])};
+  const nome={descanso:'Descanso entre turnos',dia_max:'Horas por dia',pausa_max:'Pausa depois do limite',trecho_min:'Mínimo antes da pausa',sem_pausa:'Turno sem pausa',dias_seguidos:'Dias seguidos',semana_max:'Máximo semanal',ausencia:'Turno em dia de ausência',contrato:'Acima do contrato',disponibilidade:'Fora da disponibilidade',pausa_ok:'Pausa depois de 4h30'};
+  const hTot=S.turnos.reduce((a,t)=>a+horas(t),0);
+  const comTurno=new Set(S.turnos.map(t=>t.funcionario_id)),comAus=new Set(S.aus.map(a=>a.funcionario_id));
+  const sem=S.func.filter(f=>!comTurno.has(f.id)&&!comAus.has(f.id));
+  const hContr=S.func.filter(f=>comTurno.has(f.id)).reduce((a,f)=>a+Number(f.contrato_horas),0);
+  const card=(t,v,sub,c)=>`<div class="card" style="padding:14px 16px;min-width:170px;flex:1"><div class="muted" style="font-size:12px">${t}</div><div style="font-size:26px;font-weight:700;color:${c||'inherit'}">${v}</div><div class="muted" style="font-size:12px">${sub||''}</div></div>`;
+  const dias=[...Array(7)].map((_,k)=>{const d=diaDe(k),n=S.turnos.filter(t=>t.dia===d).length,e=E.filter(v=>v.dia===d).length;return `<button class="day" data-go="${k}"><b>${DAYN[k]}</b><small>${fmtD(d)}</small><small>${n} turnos</small>${e?`<span class="dot">${e} erro(s)</span>`:'<small style="color:var(--ok)">✓</small>'}</button>`}).join('');
+  const lst=(l,c)=>l.length?l.map(([k,n])=>`<tr><td>${nome[k]||k}</td><td style="text-align:right"><b style="color:${c}">${n}</b></td></tr>`).join(''):'<tr><td class="muted">Nenhum</td></tr>';
+  return `<div style="display:flex;gap:10px;flex-wrap:wrap;margin-bottom:12px">
+  ${card('Semana',`S${w.semana_iso}`,fmtD(w.inicio)+' – '+fmtD(addDays(w.inicio,6))+' · '+({rascunho:'Rascunho',em_validacao:'Em validação',publicado:'Publicado'}[w.estado]))}
+  ${card('Turnos planeados',S.turnos.length,comTurno.size+' funcionários')}
+  ${card('Horas planeadas',fmtHrs(hTot)+' h','contrato dos que trabalham: '+fmtHrs(hContr)+' h')}
+  ${card('Erros',E.length,E.length?'bloqueiam o fecho':'pode fechar a semana',E.length?'var(--err)':'var(--ok)')}
+  ${card('Avisos',A.length,'não bloqueiam',A.length?'var(--warn)':'var(--ok)')}
+  ${card('Sem turno nem ausência',sem.length,'ver lista abaixo')}</div>
+  <div class="days" style="margin-bottom:12px">${dias}</div>
+  <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(280px,1fr));gap:12px">
+  <div class="card" style="padding:10px 14px"><b>Erros por tipo</b><table class="wk" style="width:100%"><tbody>${lst(por(E),'var(--err)')}</tbody></table></div>
+  <div class="card" style="padding:10px 14px"><b>Avisos por tipo</b><table class="wk" style="width:100%"><tbody>${lst(por(A),'var(--warn)')}</tbody></table></div>
+  <div class="card" style="padding:10px 14px"><b>Sem turno nem ausência nesta semana</b><div style="font-size:13px;max-height:220px;overflow:auto">${sem.map(f=>esc(f.nome)).join(' · ')||'<span class="muted">Todos têm turno ou ausência</span>'}</div></div></div>`}
+
+/* ---------- Disponibilidades e ausências ---------- */
+function rDisp(){
+  const ed=canEdit(),aus=S.aus.slice().sort((a,b)=>a.de.localeCompare(b.de));
+  const rowsA=aus.map(a=>{const f=S.fmap[a.funcionario_id],c=S.tipos[a.tipo]||{};return `<tr><td>${esc(f?f.nome:'—')}</td><td><span class="cell" style="background:${c.cor||'#eee'};color:${c.cor_texto||'inherit'};min-width:48px">${esc(a.tipo)}</span> ${esc(c.nome||'')}</td><td>${fmtD(a.de)}</td><td>${fmtD(a.ate)}</td><td>${ed?`<button class="btn" data-delaus="${a.id}">Remover</button>`:''}</td></tr>`}).join('');
+  const rowsD=S.func.map(f=>{const d=S.disp[f.id]||{};return `<tr><td class="nm">${esc(f.nome)}</td>${[0,1,2,3,4,5,6].map(k=>`<td style="text-align:center">${d[k]?fmtAv(d[k].hora_ini)+'–'+fmtAv(d[k].hora_fim):'<span class="muted">—</span>'}</td>`).join('')}<td>${ed?`<button class="btn" data-editdisp="${f.id}">Editar</button>`:''}</td></tr>`}).join('');
+  return `<div class="legend"><b>Ausências e folgas da semana S${S.sem?S.sem.semana_iso:''}</b><span class="sp"></span>${ed?'<button class="btn pri" id="baus">+ Ausência</button>':''}</div>
+  <div class="card" style="margin-bottom:16px"><table class="wk" style="width:100%"><thead><tr><th>Funcionário</th><th>Tipo</th><th>De</th><th>Até</th><th></th></tr></thead><tbody>${rowsA||'<tr><td colspan="5" class="empty">Sem ausências nesta semana.</td></tr>'}</tbody></table></div>
+  <div class="legend"><b>Disponibilidades habituais</b><span>Horas depois da meia-noite aparecem com ⁺¹.</span></div>
+  <div class="card scr"><table class="wk" style="width:100%"><thead><tr><th>Funcionário</th>${DAYN.map(d=>`<th>${d}</th>`).join('')}<th></th></tr></thead><tbody>${rowsD}</tbody></table></div>`}
+function bindDisp(){
+  const q=s=>document.querySelector(s);
+  document.querySelectorAll('[data-delaus]').forEach(b=>b.onclick=async()=>{const r=await sb.from('gh_ausencias').delete().eq('id',b.dataset.delaus);if(r.error)toast(r.error.message,true);else toast('Removida');await loadSemana()});
+  document.querySelectorAll('[data-editdisp]').forEach(b=>b.onclick=()=>openDisp(b.dataset.editdisp));
+  const add=q('#baus');if(add)add.onclick=()=>{const d=$('#dlg'),i=S.sem?S.sem.inicio:new Date().toISOString().slice(0,10);
+    const tipos=Object.values(S.tipos).filter(t=>t.categoria!=='trabalho');
+    d.innerHTML=`<div class="dh">Nova ausência / folga</div><div class="db"><label class="full">Funcionário<select id="a_f">${S.func.map(f=>`<option value="${f.id}">${esc(f.nome)}</option>`).join('')}</select></label>
+    <label class="full">Tipo<select id="a_t">${tipos.map(t=>`<option value="${t.codigo}">${t.codigo} · ${esc(t.nome)}</option>`).join('')}</select></label>
+    <label>De<input type="date" id="a_de" value="${i}"></label><label>Até<input type="date" id="a_ate" value="${i}"></label></div>
+    <div class="df"><button class="btn" id="a_c">Cancelar</button><button class="btn pri" id="a_s">Guardar</button></div>`;
+    $('#a_c').onclick=()=>d.close();
+    $('#a_s').onclick=async()=>{const de=$('#a_de').value,ate=$('#a_ate').value;if(!de||!ate||ate<de)return toast('Datas inválidas.',true);
+      const r=await sb.from('gh_ausencias').insert({funcionario_id:$('#a_f').value,tipo:$('#a_t').value,de,ate,estado:'aprovada'});d.close();
+      if(r.error)toast(r.error.code==='23P01'?'Já existe uma ausência nestas datas para esta pessoa.':r.error.message,true);else toast('Guardada');await loadSemana()};
+    d.showModal()};
+}
+const parseH=v=>{v=String(v||'').trim();if(!v)return null;const m=v.match(/^(\d{1,2})(?:[:h.](\d{1,2}))?$/);if(!m)return NaN;const h=+m[1]+(+(m[2]||0))/60;return h>=0&&h<=48?h:NaN};
+function openDisp(fid){
+  const f=S.fmap[fid],cur=S.disp[fid]||{},d=$('#dlg');
+  d.innerHTML=`<div class="dh">Disponibilidade · ${esc(f.nome)}</div><div class="db" style="grid-template-columns:70px 1fr 1fr"><div class="msgs"><div class="i">Deixa vazio nos dias sem disponibilidade. Para depois da meia-noite usa 24 a 31 (ex.: 02:00 do dia seguinte = 26:00).</div></div>
+  ${[...DAYN,'Feriados'].map((n,k)=>`<b style="align-self:end">${n}</b><label>Das<input data-k="${k}" data-w="i" value="${cur[k]?fmtIn(cur[k].hora_ini):''}" placeholder="07:00"></label><label>Às<input data-k="${k}" data-w="f" value="${cur[k]?fmtIn(cur[k].hora_fim):''}" placeholder="24:00"></label>`).join('')}</div>
+  <div class="df"><button class="btn" id="d_c">Cancelar</button><button class="btn pri" id="d_s">Guardar</button></div>`;
+  $('#d_c').onclick=()=>d.close();
+  $('#d_s').onclick=async()=>{const rows=[];
+    for(let k=0;k<8;k++){const a=parseH(d.querySelector(`[data-k="${k}"][data-w="i"]`).value),b=parseH(d.querySelector(`[data-k="${k}"][data-w="f"]`).value);
+      if(Number.isNaN(a)||Number.isNaN(b))return toast('Hora inválida (usa HH:MM).',true);
+      if(a==null&&b==null)continue;if(a==null||b==null||b<=a)return toast(`Dia ${[...DAYN,'Feriados'][k]}: indica início e fim, com o fim depois do início.`,true);
+      rows.push({funcionario_id:fid,dia_semana:k,hora_ini:a,hora_fim:b})}
+    const del=await sb.from('gh_disponibilidades').delete().eq('funcionario_id',fid);if(del.error)return toast(del.error.message,true);
+    if(rows.length){const ins=await sb.from('gh_disponibilidades').insert(rows);if(ins.error)return toast(ins.error.message,true)}
+    S.disp[fid]={};rows.forEach(r=>S.disp[fid][r.dia_semana]=r);d.close();toast('Disponibilidade guardada');await loadSemana()};
+  d.showModal()}
+const fmtIn=h=>{const t=Math.round(h*60);return p2(Math.floor(t/60))+':'+p2(t%60)};
+
+/* ---------- Configurações ---------- */
+async function rCfg(){
+  const [r,g]=await Promise.all([sb.from('gh_regras').select('*').order('chave'),sb.from('gh_guia_posicionamento').select('*').order('vendas_de')]);
+  const adm=canPub();
+  const rows=(r.data||[]).map(x=>`<tr><td><b>${esc(x.chave)}</b><div class="muted" style="font-size:11px">${esc(x.descricao||'')}</div></td><td>${adm?`<input type="number" step="0.25" value="${x.valor}" data-rid="${x.id}" style="width:80px;padding:4px">`:x.valor} ${esc(x.unidade||'')}</td><td>${x.validada?'<span style="color:var(--ok)">✓ validada</span>':'<span style="color:var(--warn)">provisória — confirmar</span>'}</td><td>${adm&&!x.validada?`<button class="btn" data-val="${x.id}">Validar</button>`:''}</td></tr>`).join('');
+  const gr=(g.data||[]).map(x=>`<tr><td>${fmtHrs(x.vendas_de)} – ${fmtHrs(x.vendas_ate)} €</td><td style="text-align:right"><b>${x.pessoas}</b></td></tr>`).join('');
+  $('#main').innerHTML=`<div class="legend"><b>Regras</b><span>${adm?'Altera o valor e sai do campo para guardar.':'Só o administrador pode alterar.'}</span></div>
+  <div class="card" style="margin-bottom:16px"><table class="wk" style="width:100%"><thead><tr><th>Regra</th><th>Valor</th><th>Estado</th><th></th></tr></thead><tbody>${rows}</tbody></table></div>
+  <div class="legend"><b>Guia de posicionamento</b><span>Vendas por hora → pessoas necessárias (do Excel).</span></div>
+  <div class="card scr" style="max-height:340px"><table class="wk" style="width:100%"><thead><tr><th>Vendas / hora</th><th>Pessoas</th></tr></thead><tbody>${gr}</tbody></table></div>`;
+  document.querySelectorAll('[data-rid]').forEach(i=>i.onchange=async()=>{const u=await sb.from('gh_regras').update({valor:+i.value}).eq('id',i.dataset.rid);toast(u.error?u.error.message:'Regra guardada',!!u.error);if(!u.error)Object.assign(S.rules,{});});
+  document.querySelectorAll('[data-val]').forEach(b=>b.onclick=async()=>{const u=await sb.from('gh_regras').update({validada:true}).eq('id',b.dataset.val);toast(u.error?u.error.message:'Regra validada',!!u.error);rCfg()});
+}
+
 /* ---------- Staffing ---------- */
 function slots(dia){ // pessoas a trabalhar por meia hora (sem pausas, sem NP)
   const ax=lisbon(dia,OP,0).getTime(),c=new Array(48).fill(0);
@@ -409,7 +497,7 @@ const step=n=>{const i=S.semanas.findIndex(w=>w.id===S.sem?.id)+n;if(S.semanas[i
 $('#wprev').onclick=()=>step(-1);$('#wnext').onclick=()=>step(1);
 $('#breload').onclick=async()=>{await loadSemanas();await loadSemana()};
 document.querySelectorAll('.tab').forEach(b=>b.onclick=()=>{S.tab=b.dataset.t;render()});
-$('#main').addEventListener('click',e=>{if(e.target.id==='bcsv')return exportCsv();if(e.target.id==='bprint')return window.print();const c=e.target.closest('[data-go]');if(c){S.dia=+c.dataset.go;S.tab='dia';render()}});
+$('#main').addEventListener('click',e=>{const dg=e.target.closest('[data-go]');if(dg&&S.tab==='dash'){S.dia=+dg.dataset.go;S.tab='dia';return render()}if(e.target.id==='bcsv')return exportCsv();if(e.target.id==='bprint')return window.print();const c=e.target.closest('[data-go]');if(c){S.dia=+c.dataset.go;S.tab='dia';render()}});
 $('#bnew').onclick=async()=>{const last=S.semanas[S.semanas.length-1];const n=last?addDays(last.inicio,7):new Date().toISOString().slice(0,10);
   const r=await sb.rpc('gh_criar_semana',{p_inicio:n});if(r.error)return toast(r.error.message,true);await loadSemanas();S.sem=S.semanas.find(w=>w.inicio===n);await loadSemana();toast('Semana criada')};
 $('#bcopy').onclick=async()=>{const n=addDays(S.sem.inicio,7);if(S.semanas.some(w=>w.inicio===n))return toast('A semana seguinte já existe.',true);
