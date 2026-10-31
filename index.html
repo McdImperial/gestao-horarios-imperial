@@ -94,6 +94,25 @@ dialog::backdrop{background:#0005}
 .steps span.on{border:2px solid var(--ink);background:var(--yel);color:var(--ink)}.steps span.done{border-style:solid;color:var(--ok)}
 .chart text{font-family:var(--fh);fill:var(--ink)}.chart .bx{cursor:pointer}
 @media(max-width:860px){.kpis{grid-template-columns:repeat(2,minmax(0,1fr))}.dgrid{grid-template-columns:minmax(0,1fr)}}
+.mf{border-collapse:separate;border-spacing:0;font-size:11px}
+.mf th,.mf td{border-right:1px solid #efece5;border-bottom:1px solid #efece5;text-align:center;padding:0;min-width:30px;height:26px}
+.mf thead th{position:sticky;top:0;background:#faf8f3;z-index:6;font-weight:600;color:var(--mut)}
+.mf thead th b{display:block;font-size:12px;color:var(--ink)}
+.mf thead th[data-day]{cursor:pointer}.mf thead th[data-day]:hover{background:#fff3c4}
+.mf .nm{position:sticky;left:0;background:#fff;z-index:5;min-width:180px;max-width:180px;text-align:left;padding:0 8px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;font-size:12.5px}
+.mf thead .nm{z-index:9;background:#faf8f3}
+.mf .yr{min-width:46px;background:#faf8f3;color:var(--mut)}
+.mf td.d{cursor:cell;user-select:none;position:relative;font-weight:600;font-size:10.5px}
+.mf .we{background:#f5f2ea}.mf thead th.ws{background:#fff3c4}.mf thead th.hoje{box-shadow:inset 0 -3px 0 var(--red)}
+.mf td.sel{outline:2px solid var(--ink);outline-offset:-2px}
+.mf td.tr::after{content:"";position:absolute;right:2px;top:2px;width:5px;height:5px;border-radius:50%;background:var(--bar)}
+.mf td.cf{outline:2px solid var(--err);outline-offset:-2px}
+.mf tfoot td,.mf tfoot th{position:sticky;background:#faf8f3;z-index:6;font-weight:600}
+.mf tfoot th.nm{z-index:9;text-align:left}
+.pal{display:flex;flex-wrap:wrap;gap:6px;align-items:center;margin:0 0 10px}
+.pal button{border:2px solid transparent;border-radius:7px;padding:4px 10px;font-weight:700;cursor:pointer;font-size:12.5px}
+.pal button[aria-pressed=true]{border-color:var(--ink)}
+.mfbox{max-height:calc(100vh - 290px);min-height:320px}
 .empty{padding:40px;text-align:center;color:var(--mut)}
 .legend{display:flex;gap:12px;font-size:12px;color:var(--mut);margin:8px 2px;flex-wrap:wrap;align-items:center}
 .legend i{display:inline-block;width:14px;height:10px;border-radius:2px;vertical-align:middle;margin-right:4px}
@@ -121,6 +140,7 @@ dialog::backdrop{background:#0005}
   <button class="tab" role="tab" data-t="stf">Staffing</button>
   <button class="tab" role="tab" data-t="func">Funcionários</button>
   <button class="tab" role="tab" data-t="disp">Disponibilidades e ausências</button>
+  <button class="tab" role="tab" data-t="mapa">Mapa de folgas</button>
   <button class="tab" role="tab" data-t="hist">Histórico</button>
   <button class="tab" role="tab" data-t="cfg">Configurações</button>
 </div>
@@ -228,6 +248,7 @@ function render(){
   if(S.tab==='cfg'){m.innerHTML='<div class="empty">A carregar…</div>';return rCfg()}
   if(S.tab==='disp'){m.innerHTML=rDisp();return bindDisp()}
   if(S.tab==='dash')return rDash();
+  if(S.tab==='mapa'){m.innerHTML='<div class="empty">A carregar…</div>';return rMapa()}
   if(S.tab==='stf'){m.innerHTML='<div class="empty">A carregar…</div>';return rStaff()}
   if(S.tab==='hist'){m.innerHTML='<div class="empty">A carregar…</div>';return rHist()}
   if(!w)return m.innerHTML='<div class="empty">Ainda não há semanas. '+(canEdit()?'Cria a primeira em «Nova semana».':'')+'</div>';
@@ -256,10 +277,12 @@ function rDia(){
   const hours=[...Array(24)].map((_,i)=>`<span class="h" style="left:${i*PX}px"></span>`).join('');
   const head=[...Array(24)].map((_,i)=>`<span style="position:absolute;left:${i*PX+3}px">${p2((OP+i)%24)}</span>`).join('');
   const ids=new Set();S.turnos.filter(t=>t.dia===dia).forEach(t=>ids.add(t.funcionario_id));
-  S.aus.forEach(a=>{if(a.de<=dia&&a.ate>=dia)ids.add(a.funcionario_id)});
   const list=[...ids].map(id=>S.fmap[id]).filter(Boolean);
   const first=f=>{const ts=S.turnos.filter(t=>t.dia===dia&&t.funcionario_id===f.id);return ts.length?Date.parse(ts[0].inicio):9e15};
   list.sort((a,b)=>first(a)-first(b)||a.nome.localeCompare(b.nome));
+  const grp={};S.aus.filter(a=>a.de<=dia&&a.ate>=dia).forEach(a=>{(grp[a.tipo]=grp[a.tipo]||[]).push(a.funcionario_id)});
+  const foraH=Object.keys(grp).sort((a,b)=>((S.tipos[a]||{}).ordem||99)-((S.tipos[b]||{}).ordem||99)).map(t=>{const c=S.tipos[t]||{};
+    return `<div style="display:flex;gap:8px;align-items:flex-start;margin:4px 0"><span class="cell" style="background:${c.cor||'#ead9d6'};color:${c.cor_texto||'inherit'};min-width:52px;flex:none">${esc(t)}</span><span style="font-size:13px"><b>${grp[t].length}</b> · <span class="muted">${esc(c.nome||t)}:</span> ${grp[t].map(id=>S.fmap[id]?esc(S.fmap[id].nome):'').filter(Boolean).sort((a,b)=>a.localeCompare(b)).join(', ')}</span></div>`}).join('');
   const cov=new Array(48).fill(0);
   const rows=list.map(f=>{
     const ts=S.turnos.filter(t=>t.dia===dia&&t.funcionario_id===f.id),a=ausDe(f.id,dia),vs=valDe(f.id,dia),w=worst(vs);
@@ -277,15 +300,17 @@ function rDia(){
   const covr=cov.map((n,i)=>`<span class="${n<(S.rules.cobertura_min||2)?'c0':n<(S.rules.cobertura_min||2)+2?'c1':'c2'}" data-tip="${p2((OP+Math.floor(i/2))%24)}:${i%2?'30':'00'} · ${n} pessoa(s)">${n}</span>`).join('');
   return `<div class="days">${days}</div>
   <div class="legend"><span><i style="background:var(--bar)"></i>Turno</span><span><i style="background:repeating-linear-gradient(45deg,#fff,#fff 3px,#ddd 3px,#ddd 6px)"></i>Pausa (até 2)</span><span><i style="background:var(--err)"></i>Erro</span><span><i style="background:#c98a00"></i>Alerta</span>${canEdit()?'<span>Clica na barra para marcar pausa (até 2) · clica na pausa para a remover · arrasta barra, pontas ou pausa (30 min) · ✎ edita as horas</span>':'<span>Só leitura</span>'}
-  <span class="sp"></span>${canEdit()?'<button class="btn" id="badd">+ Turno</button>':''}</div>
+  <span class="sp"></span><button class="btn" id="bmapa">Mapa de folgas ›</button>${canEdit()?'<button class="btn" id="badd">+ Turno</button>':''}</div>
   <div class="card"><table class="g"><thead><tr><th class="nm">Funcionário</th><th class="dsp">Disponib.</th><th class="alr">⚠</th><th><div class="tl" style="height:22px;background:none">${head}</div></th></tr></thead><tbody>${rows||'<tr><td colspan="4" class="empty">Sem turnos neste dia.</td></tr>'}
-  <tr class="cov"><td class="nm"><b>Pessoas em loja</b></td><td></td><td></td><td><div class="covrow">${covr}</div></td></tr></tbody></table></div>`;
+  <tr class="cov"><td class="nm"><b>Pessoas em loja</b></td><td></td><td></td><td><div class="covrow">${covr}</div></td></tr></tbody></table></div>
+  <div class="card" style="padding:10px 14px;margin-top:12px"><b>Fora da escala neste dia</b> <span class="muted" style="font-size:12px">(do mapa de folgas)</span>${foraH||'<div class="muted" style="margin-top:4px">Ninguém com folga, férias ou baixa marcada.</div>'}</div>`;
 }
 
 /* ---------- interação do planeamento ---------- */
 function bindDia(){
   document.querySelectorAll('.day').forEach(b=>b.onclick=()=>{S.dia=+b.dataset.d;render()});
   const add=$('#badd');if(add)add.onclick=()=>openEd(null);
+  $('#bmapa').onclick=()=>{S.mf=Object.assign(S.mf||{pincel:'OFF',q:''},{mes:diaDe(S.dia).slice(0,7)});S.tab='mapa';render()};
   document.querySelectorAll('[data-ed]').forEach(b=>b.onclick=()=>openEd(S.turnos.find(x=>x.id===b.dataset.ed)));
   const AX0=()=>lisbon(diaDe(S.dia),OP,0).getTime(),HALF=18e5,snap=ms=>Math.round(ms/HALF)*HALF;
   document.querySelectorAll('.bar').forEach(el=>{
@@ -521,6 +546,72 @@ async function rStaff(){
   $('#main').innerHTML=`<div class="legend"><span>Diferença entre pessoas em loja e o guia de posicionamento, por hora.</span><span><i style="background:#e57373"></i>falta (−3 ou pior)</span><span><i style="background:#f6c28b"></i>falta</span><span><i style="background:#fbe98a"></i>certo</span><span><i style="background:#cfe6c4"></i>a mais</span><span><i style="background:#6f93c9"></i>muito a mais</span><span class="sp"></span><b>${falta} hora(s) com falta</b></div>
   <div class="card"><table class="wk" style="width:100%"><thead><tr><th>Dia</th>${hh}</tr></thead><tbody>${rows}</tbody></table></div>
   <p class="muted" style="font-size:12px">Usa as vendas horárias previstas e o guia de posicionamento do Excel. Horas sem previsão de vendas ficam a cinzento.</p>`}
+
+
+/* ---------- Mapa de folgas (calendário anual ligado ao planeamento diário) ---------- */
+async function fetchAll(mk){let o=[],i=0;for(;;){const r=await mk().range(i,i+999);if(r.error)throw r.error;o=o.concat(r.data);if(r.data.length<1000)break;i+=1000}return o}
+const corT=t=>{const c=S.tipos[t]||{};return {bg:c.cor||'#ead9d6',fg:c.cor_texto||'#1f1d1a'}};
+const GRUPO={OFF:'folga','OFF F':'folga','OFF P':'folga',F:'ferias',FX:'ferias',BX:'baixa',S:'baixa',L:'baixa',SA:'baixa',DC:'baixa'};
+async function rMapa(){
+  const m=$('#main');
+  if(!S.mf)S.mf={mes:(S.sem?S.sem.inicio:new Date().toISOString().slice(0,10)).slice(0,7),pincel:'OFF',q:''};
+  const mes=S.mf.mes,[y,mo]=mes.split('-').map(Number),nd=new Date(Date.UTC(y,mo,0)).getUTCDate(),ini=mes+'-01',fim=mes+'-'+p2(nd);
+  let aus,tur,res;
+  try{[aus,tur,res]=await Promise.all([
+    fetchAll(()=>sb.from('gh_ausencias').select('id,funcionario_id,tipo,de,ate').eq('estado','aprovada').lte('de',fim).gte('ate',ini).order('de').order('id')),
+    fetchAll(()=>sb.from('gh_turnos').select('id,funcionario_id,dia').gte('dia',ini).lte('dia',fim).order('dia').order('id')),
+    sb.rpc('gh_resumo_ausencias',{p_ano:y})])}catch(e){m.innerHTML='<div class="empty">Erro ao carregar: '+esc(e.message||e)+'</div>';return}
+  if(S.tab!=='mapa'||S.mf.mes!==mes)return;
+  const cell={};aus.forEach(a=>{const c=cell[a.funcionario_id]=cell[a.funcionario_id]||{};
+    for(let d=Math.max(1,a.de<ini?1:+a.de.slice(8));d<=Math.min(nd,a.ate>fim?nd:+a.ate.slice(8));d++)c[d]=a.tipo});
+  const tset=new Set(tur.map(t=>t.funcionario_id+'|'+(+t.dia.slice(8))));
+  const yr={};(res.data||[]).forEach(r=>{const o=yr[r.funcionario_id]=yr[r.funcionario_id]||{f:0};if(GRUPO[r.tipo]==='ferias')o.f+=r.dias});
+  const ws=S.sem?S.sem.inicio:null,hoje=new Date().toISOString().slice(0,10);
+  const dias=[...Array(nd)].map((_,i)=>{const d=i+1,ds=mes+'-'+p2(d),wd=(new Date(ds+'T00:00:00Z').getUTCDay()+6)%7;return {d,ds,wd,we:wd>=5,ws:ws&&ds>=ws&&ds<=addDays(ws,6),hoje:ds===hoje}});
+  const head=dias.map(x=>`<th data-day="${x.ds}" class="${x.we?'we':''} ${x.ws?'ws':''} ${x.hoje?'hoje':''}" title="Abrir ${x.ds.split('-').reverse().join('/')} no planeamento diário"><b>${x.d}</b><span style="font-size:9.5px">${DAYN[x.wd]}</span></th>`).join('');
+  const q=(S.mf.q||'').toLowerCase();
+  const tipos=Object.values(S.tipos).filter(t=>t.categoria!=='trabalho');
+  const cnt=dias.map(()=>({folga:0,ferias:0,baixa:0,turno:0})),
+    cnt2=cnt;
+  const rows=S.func.map(f=>{const c=cell[f.id]||{};
+    const tds=dias.map((x,i)=>{const t=c[x.d],tr=tset.has(f.id+'|'+x.d);
+      if(t){cnt[i][GRUPO[t]||'baixa']++}if(tr)cnt[i].turno++;
+      const k=t?corT(t):null;
+      return `<td class="d ${x.we&&!t?'we':''} ${tr?'tr':''} ${t&&tr?'cf':''}" data-f="${f.id}" data-d="${x.d}" ${t?`style="background:${k.bg};color:${k.fg}"`:''} ${tr?`data-tip="${t?'Tem turno planeado e '+esc((S.tipos[t]||{}).nome||t)+' neste dia':'Tem turno planeado'}"`:t?`data-tip="${esc((S.tipos[t]||{}).nome||t)}"`:''}>${t?esc(t==='OFF'?'OFF':t):''}</td>`}).join('');
+    return `<tr data-n="${esc(f.nome.toLowerCase())}" ${q&&!f.nome.toLowerCase().includes(q)?'hidden':''}><td class="nm" title="${esc(f.nome)}">${esc(f.nome)}</td><td class="yr" data-tip="Dias de férias marcados em ${y}">${(yr[f.id]||{f:0}).f||''}</td>${tds}</tr>`}).join('');
+  const N=S.func.length;
+  const linha=(nome,fn,i)=>`<tr><th class="nm" style="bottom:${(4-i)*27}px">${nome}</th><td class="yr" style="bottom:${(4-i)*27}px"></td>${cnt.map((c,j)=>`<td style="bottom:${(4-i)*27}px" class="${dias[j].we?'we':''}">${fn(c)}</td>`).join('')}</tr>`;
+  const foot=linha('A trabalhar',c=>N-c.folga-c.ferias-c.baixa,0)+linha('Folgas',c=>c.folga||'',1)+linha('Férias',c=>c.ferias||'',2)+linha('Baixa / licença / seguro',c=>c.baixa||'',3)+linha('Com turno planeado',c=>c.turno||'',4);
+  const pal=canEdit()?`<div class="pal"><b>Marcar:</b>${tipos.map(t=>{const k=corT(t.codigo);return `<button data-p="${esc(t.codigo)}" aria-pressed="${S.mf.pincel===t.codigo}" style="background:${k.bg};color:${k.fg}" title="${esc(t.nome)}">${esc(t.codigo)}</button>`}).join('')}<button data-p="-" aria-pressed="${S.mf.pincel==='-'}" style="background:#fff;border-color:var(--line)" title="Apagar a marcação">Apagar</button><span class="muted" style="font-size:12px">Escolhe o código, depois clica num dia ou arrasta ao longo da linha do funcionário.</span></div>`:'';
+  m.innerHTML=`<div class="legend" style="margin-top:0"><button class="btn" id="mfp" aria-label="Mês anterior">‹</button><input type="month" id="mfm" class="btn" value="${mes}"><button class="btn" id="mfn" aria-label="Mês seguinte">›</button>
+    <input id="mfq" class="btn" placeholder="Procurar funcionário" value="${esc(S.mf.q||'')}" style="min-width:180px"><span class="sp"></span>
+    <span><i style="background:#fff3c4;border:1px solid #e6cf7a"></i>semana aberta no planeamento</span><span><i style="background:var(--bar);border-radius:50%;width:8px;height:8px"></i>tem turno planeado</span><span><i style="outline:2px solid var(--err);outline-offset:-2px;background:#fff"></i>turno em dia de ausência</span></div>
+    ${pal}
+    <div class="card mfbox"><table class="mf"><thead><tr><th class="nm">Funcionário</th><th class="yr" title="Férias marcadas no ano">Férias ${y}</th>${head}</tr></thead><tbody>${rows}</tbody><tfoot>${foot}</tfoot></table></div>
+    <p class="muted" style="font-size:12px">Clica no número do dia para abrir esse dia no planeamento diário. As folgas, férias e baixas marcadas aqui são as que o planeamento usa para avisar de turnos em dias de ausência. Dados iniciais importados do Mapa Folgas do Excel.</p>`;
+  bindMapa(y,mes);
+}
+function bindMapa(y,mes){
+  const mv=n=>{const [yy,mm]=S.mf.mes.split('-').map(Number),d=new Date(Date.UTC(yy,mm-1+n,1));S.mf.mes=d.toISOString().slice(0,7);rMapa()};
+  $('#mfp').onclick=()=>mv(-1);$('#mfn').onclick=()=>mv(1);
+  $('#mfm').onchange=e=>{if(e.target.value){S.mf.mes=e.target.value;rMapa()}};
+  $('#mfq').oninput=e=>{S.mf.q=e.target.value;const q=S.mf.q.toLowerCase();document.querySelectorAll('.mf tbody tr').forEach(r=>r.hidden=!!q&&!r.dataset.n.includes(q))};
+  document.querySelectorAll('.pal [data-p]').forEach(b=>b.onclick=()=>{S.mf.pincel=b.dataset.p;document.querySelectorAll('.pal [data-p]').forEach(x=>x.setAttribute('aria-pressed',x===b))});
+  document.querySelectorAll('.mf th[data-day]').forEach(h=>h.onclick=async()=>{const d=h.dataset.day,w=S.semanas.find(w=>w.inicio<=d&&addDays(w.inicio,6)>=d);
+    if(!w)return toast('Ainda não existe semana criada para '+d.split('-').reverse().join('/')+'.',true);
+    S.sem=w;S.dia=Math.round((Date.parse(d)-Date.parse(w.inicio))/864e5);S.tab='dia';await loadSemana()});
+  if(!canEdit())return;
+  const tb=document.querySelector('.mf');let drag=null;
+  const paint=()=>document.querySelectorAll('.mf td.d').forEach(td=>td.classList.toggle('sel',!!drag&&td.dataset.f===drag.f&&+td.dataset.d>=Math.min(drag.a,drag.b)&&+td.dataset.d<=Math.max(drag.a,drag.b)));
+  tb.addEventListener('mousedown',e=>{const td=e.target.closest('td.d');if(!td||e.button)return;drag={f:td.dataset.f,a:+td.dataset.d,b:+td.dataset.d};paint();e.preventDefault()});
+  tb.addEventListener('mouseover',e=>{if(!drag)return;const td=e.target.closest('td.d');if(td&&td.dataset.f===drag.f){drag.b=+td.dataset.d;paint()}});
+  const up=async()=>{document.removeEventListener('mouseup',up);if(!drag)return;const d=drag;drag=null;
+    const a=Math.min(d.a,d.b),b=Math.max(d.a,d.b),t=S.mf.pincel==='-'?null:S.mf.pincel;
+    const r=await sb.rpc('gh_definir_ausencia',{p_func:d.f,p_de:mes+'-'+p2(a),p_ate:mes+'-'+p2(b),p_tipo:t});
+    if(r.error){paint();return toast(r.error.message,true)}
+    await loadSemana()};
+  tb.addEventListener('mousedown',()=>document.addEventListener('mouseup',up,{once:true}),true);
+}
 
 /* ---------- Histórico ---------- */
 async function rHist(){
