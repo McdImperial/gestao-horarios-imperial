@@ -5,32 +5,40 @@
 <meta name="viewport" content="width=device-width,initial-scale=1">
 <meta name="robots" content="noindex,nofollow">
 <title>Gestão de Horários — McDonald's Imperial</title>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@600;700&family=Barlow:wght@400;500;600&display=swap">
 <style>
-:root{--red:#da291c;--yel:#ffc72c;--ink:#1f1d1a;--mut:#6b665f;--line:#e4e0d8;--bg:#f6f4ef;--card:#fff;--ok:#2e7d32;--warn:#b26a00;--err:#c62828;--bar:#274b7a}
+/* Aspeto do protótipo aprovado: barra amarela de topo, separadores com sublinhado vermelho, cartões com contorno. */
+:root{--red:#da291c;--yel:#ffc72c;--ink:#1f1d1a;--mut:#6a655d;--line:#dedbd3;--bg:#f4f4f1;--card:#fff;--ok:#2e8b57;--warn:#d99a00;--err:#d12f26;--bar:#274b7a;--fh:"Barlow Condensed","Arial Narrow",Arial,sans-serif}
 *{box-sizing:border-box}
-body{margin:0;font:14px/1.4 system-ui,-apple-system,"Segoe UI",Roboto,sans-serif;background:var(--bg);color:var(--ink)}
-header{background:#fff;border-bottom:3px solid var(--yel);padding:10px 16px;display:flex;flex-wrap:wrap;gap:10px;align-items:center;position:sticky;top:0;z-index:20}
-header h1{font-size:17px;margin:0 8px 0 0}
-header h1 b{color:var(--red)}
+body{margin:0;font:15px/1.4 "Barlow",system-ui,-apple-system,"Segoe UI",Arial,sans-serif;font-variant-numeric:tabular-nums;background:var(--bg);color:var(--ink)}
+h1,h2,h3{font-family:var(--fh);margin:0;letter-spacing:.2px}
+header{background:var(--yel);color:var(--ink);padding:10px 16px;display:flex;flex-wrap:wrap;gap:10px 14px;align-items:center;position:sticky;top:0;z-index:20}
+.brand{display:flex;align-items:center;gap:10px}
+.brand .m{background:var(--red);color:#fff;font:700 24px/1 var(--fh);width:36px;height:36px;border-radius:8px;display:grid;place-items:center}
+.brand b{font:700 21px/1 var(--fh);display:block}.brand small{font-size:12px;opacity:.8}
+.wkp{display:flex;align-items:center;gap:4px;background:rgba(255,255,255,.55);border-radius:10px;padding:4px 6px}
+.wkp button{border:0;background:transparent;font-size:20px;line-height:1;padding:2px 8px;border-radius:6px;cursor:pointer;color:var(--ink)}
+.wkp select{border:0;background:transparent;font:700 17px var(--fh);color:var(--ink);cursor:pointer;padding:2px 4px}
 button,select,input{font:inherit}
-.btn{border:1px solid var(--line);background:#fff;border-radius:8px;padding:6px 11px;cursor:pointer}
-.btn:hover{border-color:#bbb}
+.btn{border:1px solid var(--line);background:#fff;color:var(--ink);border-radius:8px;padding:7px 12px;cursor:pointer;font-weight:600;font-size:14px}
+.btn:hover{border-color:var(--ink)}
 .btn.pri{background:var(--red);color:#fff;border-color:var(--red)}
+.btn.dark{background:#1f1d1a;color:#fff;border-color:#1f1d1a}
 .btn.ok{background:var(--ok);color:#fff;border-color:var(--ok)}
 .btn[disabled]{opacity:.45;cursor:not-allowed}
-.tabs{display:flex;gap:4px;padding:8px 16px 0;background:#fff;border-bottom:1px solid var(--line);flex-wrap:wrap}
-.tab{padding:8px 14px;border:0;background:none;cursor:pointer;border-bottom:3px solid transparent;color:var(--mut)}
-.tab[aria-selected=true]{color:var(--ink);border-color:var(--red);font-weight:600}
-main{padding:14px 16px 60px}
-.badge{padding:2px 9px;border-radius:99px;font-size:12px;font-weight:600;background:#eee}
-.badge.rascunho{background:#fff3cd;color:#7a5a00}.badge.em_validacao{background:#dbe9ff;color:#1d4b8f}.badge.publicado{background:#d9f2dc;color:#1b5e20}
+.tabs{display:flex;gap:2px;padding:0 16px;background:#fff;border-bottom:1px solid var(--line);flex-wrap:nowrap;overflow-x:auto;position:sticky;top:0;z-index:5}
+.tab{padding:12px 14px;border:0;background:none;cursor:pointer;border-bottom:3px solid transparent;color:var(--mut);font-weight:600;white-space:nowrap}
+.tab[aria-selected=true]{color:var(--ink);border-color:var(--red)}
+main{padding:18px 16px 60px;max-width:1440px;margin:0 auto}
+.badge{display:inline-flex;align-items:center;border-radius:999px;padding:3px 12px;font-weight:600;font-size:13px;background:#eeece6;border:1px solid var(--line)}
+.badge.rascunho{background:#fff3c4;color:#5a4300;border-color:#e6cf7a}.badge.em_validacao{background:#dbe8fb;color:#123b7a;border-color:#a9c4ee}.badge.publicado{background:#d6f0e0;color:#14532d;border-color:#9bd3b1}
 .sp{flex:1}
 .days{display:flex;gap:6px;margin-bottom:10px;flex-wrap:wrap}
 .day{border:1px solid var(--line);background:#fff;border-radius:8px;padding:5px 10px;cursor:pointer;text-align:center;min-width:64px}
 .day small{display:block;color:var(--mut)}
 .day[aria-selected=true]{border-color:var(--red);box-shadow:inset 0 -3px 0 var(--red)}
 .day .dot{color:var(--err);font-weight:700}
-.card{background:var(--card);border:1px solid var(--line);border-radius:10px;overflow:auto}
+.card{background:var(--card);border:1px solid var(--line);border-radius:12px;overflow:auto}
 table.g{border-collapse:separate;border-spacing:0;width:100%}
 .g th,.g td{border-bottom:1px solid #efece5;padding:0;vertical-align:middle}
 .g thead th{position:sticky;top:0;background:#faf8f3;font-size:11px;color:var(--mut);font-weight:600;z-index:5;height:26px}
@@ -74,6 +82,18 @@ dialog::backdrop{background:#0005}
 #tip{position:fixed;z-index:99;background:#1f1d1a;color:#fff;padding:7px 10px;border-radius:7px;font-size:12px;max-width:300px;display:none;pointer-events:none;white-space:pre-line}
 #toast{position:fixed;bottom:16px;left:50%;transform:translateX(-50%);background:#1f1d1a;color:#fff;padding:9px 16px;border-radius:9px;display:none;z-index:100;max-width:90%}
 #toast.bad{background:var(--err)}
+.kpis{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:14px;margin-bottom:14px}
+.kpi{padding:16px 18px}.kpi small{display:block;color:var(--mut);font-size:12.5px;text-transform:uppercase;letter-spacing:.6px}
+.kpi b{display:block;font:700 34px/1.1 var(--fh)}.kpi span{font-size:13px;color:var(--mut)}
+.dgrid{display:grid;grid-template-columns:minmax(0,3fr) minmax(0,2fr);gap:14px;margin-bottom:14px}
+.pad{padding:16px 18px}.pad h2{font-size:22px}.sub{color:var(--mut);font-size:13.5px;margin:2px 0 12px}
+.alist{list-style:none;margin:0;padding:0;display:flex;flex-direction:column;gap:6px}
+.alist li{display:flex;gap:10px;align-items:flex-start;border:1px solid var(--line);border-radius:8px;padding:7px 10px;font-size:14px}
+.sem{width:12px;height:12px;border-radius:50%;margin-top:5px;flex:none;background:var(--warn)}.sem.e{background:var(--err)}
+.steps{display:flex;gap:6px;flex-wrap:wrap}.steps span{flex:1;min-width:110px;text-align:center;padding:9px;border-radius:8px;border:1px dashed var(--line);color:var(--mut);font-weight:600}
+.steps span.on{border:2px solid var(--ink);background:var(--yel);color:var(--ink)}.steps span.done{border-style:solid;color:var(--ok)}
+.chart text{font-family:var(--fh);fill:var(--ink)}.chart .bx{cursor:pointer}
+@media(max-width:860px){.kpis{grid-template-columns:repeat(2,minmax(0,1fr))}.dgrid{grid-template-columns:minmax(0,1fr)}}
 .empty{padding:40px;text-align:center;color:var(--mut)}
 .legend{display:flex;gap:12px;font-size:12px;color:var(--mut);margin:8px 2px;flex-wrap:wrap;align-items:center}
 .legend i{display:inline-block;width:14px;height:10px;border-radius:2px;vertical-align:middle;margin-right:4px}
@@ -83,18 +103,16 @@ dialog::backdrop{background:#0005}
 </head>
 <body>
 <header>
-  <h1>Gestão de <b>Horários</b></h1>
-  <select id="wsel" class="btn" aria-label="Semana"></select>
-  <button class="btn" id="wprev" title="Semana anterior">‹</button>
-  <button class="btn" id="wnext" title="Semana seguinte">›</button>
+  <div class="brand"><span class="m">M</span><div><b>McD Imperial</b><small>Gestão de Horários</small></div></div>
+  <div class="wkp"><button id="wprev" title="Semana anterior" aria-label="Semana anterior">‹</button><select id="wsel" aria-label="Semana"></select><button id="wnext" title="Semana seguinte" aria-label="Semana seguinte">›</button></div>
   <span id="wbadge" class="badge"></span>
   <span class="sp"></span>
   <button class="btn" id="bnew">Nova semana</button>
   <button class="btn" id="bcopy">Copiar para a seguinte</button>
   <button class="btn" id="breload" title="Atualizar">↻</button>
   <button class="btn" id="blogout" hidden title="Terminar sessão">Sair</button>
-  <button class="btn pri" id="bvalid">Enviar para validação</button>
-  <button class="btn ok" id="bpub">Publicar</button>
+  <button class="btn dark" id="bvalid">Enviar para validação</button>
+  <button class="btn pri" id="bpub">Publicar</button>
 </header>
 <div class="tabs" role="tablist">
   <button class="tab" role="tab" data-t="dash">Dashboard</button>
@@ -209,7 +227,7 @@ function render(){
   if(S.tab==='func')return m.innerHTML=rFunc();
   if(S.tab==='cfg'){m.innerHTML='<div class="empty">A carregar…</div>';return rCfg()}
   if(S.tab==='disp'){m.innerHTML=rDisp();return bindDisp()}
-  if(S.tab==='dash')return m.innerHTML=rDash();
+  if(S.tab==='dash')return rDash();
   if(S.tab==='stf'){m.innerHTML='<div class="empty">A carregar…</div>';return rStaff()}
   if(S.tab==='hist'){m.innerHTML='<div class="empty">A carregar…</div>';return rHist()}
   if(!w)return m.innerHTML='<div class="empty">Ainda não há semanas. '+(canEdit()?'Cria a primeira em «Nova semana».':'')+'</div>';
@@ -383,29 +401,46 @@ function openEd(t){
   d.showModal()}
 
 /* ---------- Dashboard ---------- */
-function rDash(){
-  const w=S.sem,E=S.val.filter(v=>v.nivel==='erro'),A=S.val.filter(v=>v.nivel==='aviso');
-  const por=l=>{const o={};l.forEach(v=>o[v.codigo]=(o[v.codigo]||0)+1);return Object.entries(o).sort((a,b)=>b[1]-a[1])};
-  const nome={descanso:'Descanso entre turnos',dia_max:'Horas por dia',pausa_max:'Pausa depois do limite',trecho_min:'Mínimo antes da pausa',sem_pausa:'Turno sem pausa',dias_seguidos:'Dias seguidos',semana_max:'Máximo semanal',ausencia:'Turno em dia de ausência',contrato:'Acima do contrato',disponibilidade:'Fora da disponibilidade',pausa_ok:'Pausa depois de 4h30'};
-  const hTot=S.turnos.reduce((a,t)=>a+horas(t),0);
-  const comTurno=new Set(S.turnos.map(t=>t.funcionario_id)),comAus=new Set(S.aus.map(a=>a.funcionario_id));
-  const sem=S.func.filter(f=>!comTurno.has(f.id)&&!comAus.has(f.id));
-  const hContr=S.func.filter(f=>comTurno.has(f.id)).reduce((a,f)=>a+Number(f.contrato_horas),0);
-  const card=(t,v,sub,c)=>`<div class="card" style="padding:14px 16px;min-width:170px;flex:1"><div class="muted" style="font-size:12px">${t}</div><div style="font-size:26px;font-weight:700;color:${c||'inherit'}">${v}</div><div class="muted" style="font-size:12px">${sub||''}</div></div>`;
-  const dias=[...Array(7)].map((_,k)=>{const d=diaDe(k),n=S.turnos.filter(t=>t.dia===d).length,e=E.filter(v=>v.dia===d).length;return `<button class="day" data-go="${k}"><b>${DAYN[k]}</b><small>${fmtD(d)}</small><small>${n} turnos</small>${e?`<span class="dot">${e} erro(s)</span>`:'<small style="color:var(--ok)">✓</small>'}</button>`}).join('');
-  const lst=(l,c)=>l.length?l.map(([k,n])=>`<tr><td>${nome[k]||k}</td><td style="text-align:right"><b style="color:${c}">${n}</b></td></tr>`).join(''):'<tr><td class="muted">Nenhum</td></tr>';
-  return `<div style="display:flex;gap:10px;flex-wrap:wrap;margin-bottom:12px">
-  ${card('Semana',`S${w.semana_iso}`,fmtD(w.inicio)+' – '+fmtD(addDays(w.inicio,6))+' · '+({rascunho:'Rascunho',em_validacao:'Em validação',publicado:'Publicado'}[w.estado]))}
-  ${card('Turnos planeados',S.turnos.length,comTurno.size+' funcionários')}
-  ${card('Horas planeadas',fmtHrs(hTot)+' h','contrato dos que trabalham: '+fmtHrs(hContr)+' h')}
-  ${card('Erros',E.length,E.length?'bloqueiam o fecho':'pode fechar a semana',E.length?'var(--err)':'var(--ok)')}
-  ${card('Avisos',A.length,'não bloqueiam',A.length?'var(--warn)':'var(--ok)')}
-  ${card('Sem turno nem ausência',sem.length,'ver lista abaixo')}</div>
-  <div class="days" style="margin-bottom:12px">${dias}</div>
-  <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(280px,1fr));gap:12px">
-  <div class="card" style="padding:10px 14px"><b>Erros por tipo</b><table class="wk" style="width:100%"><tbody>${lst(por(E),'var(--err)')}</tbody></table></div>
-  <div class="card" style="padding:10px 14px"><b>Avisos por tipo</b><table class="wk" style="width:100%"><tbody>${lst(por(A),'var(--warn)')}</tbody></table></div>
-  <div class="card" style="padding:10px 14px"><b>Sem turno nem ausência nesta semana</b><div style="font-size:13px;max-height:220px;overflow:auto">${sem.map(f=>esc(f.nome)).join(' · ')||'<span class="muted">Todos têm turno ou ausência</span>'}</div></div></div>`}
+async function rDash(){
+  const m=$('#main');m.innerHTML='<div class="empty">A carregar…</div>';
+  const w=S.sem;if(!w){m.innerHTML='<div class="empty">Ainda não há semanas.</div>';return}
+  const i=w.inicio,fim=addDays(i,6);
+  const [g,v]=await Promise.all([sb.from('gh_guia_posicionamento').select('vendas_de,pessoas').order('vendas_de'),
+    sb.from('gh_vendas_horarias').select('dia,hora,valor').gte('dia',i).lte('dia',fim)]);
+  if(S.tab!=='dash'||S.sem!==w)return;
+  const guia=(g.data||[]).map(x=>({de:+x.vendas_de,n:x.pessoas})),vend={};(v.data||[]).forEach(x=>vend[x.dia+'|'+x.hora]=+x.valor);
+  const E=S.val.filter(x=>x.nivel==='erro'),A=S.val.filter(x=>x.nivel==='aviso');
+  const plan=[],need=[];let okI=0,totI=0,temV=false;
+  for(let k=0;k<7;k++){const d=diaDe(k),c=slots(d);let n=0;
+    plan.push(S.turnos.filter(t=>t.dia===d).reduce((a,t)=>a+horas(t),0));
+    for(let j=0;j<24;j++){const h=(OP+j)%24,vv=vend[d+'|'+h];if(!vv)continue;temV=true;const nd=needFor(guia,vv);n+=nd;
+      for(let q=0;q<2;q++){totI++;if(c[2*j+q]>=nd)okI++}}
+    need.push(temV?n:null)}
+  const hTot=plan.reduce((a,b)=>a+b,0),hNec=need.reduce((a,b)=>a+(b||0),0),pessoas=new Set(S.turnos.map(t=>t.funcionario_id)).size;
+  const cob=totI?Math.round(100*okI/totI):null;
+  const W=900,H=330,L=52,B=34,T=24,mx=Math.max(10,...plan,...need.map(x=>x||0)),y=h=>H-B-(H-B-T)*h/mx,bw=(W-L)/7;
+  const top=Math.ceil(mx/20)*20,yy=h=>H-B-(H-B-T)*h/top;
+  const grid=[0,.25,.5,.75,1].map(f=>{const hv=Math.round(top*f);return `<line x1="${L}" x2="${W}" y1="${yy(hv)}" y2="${yy(hv)}" stroke="#dedbd3"/><text x="${L-8}" y="${yy(hv)+5}" text-anchor="end" font-size="15">${hv}</text>`}).join('');
+  const bars=plan.map((h,k)=>{const x=L+k*bw+bw*.2,ww=bw*.6;return `<g class="bx" data-go="${k}"><rect x="${x}" y="${yy(h)}" width="${ww}" height="${H-B-yy(h)}" rx="3" fill="#f7c948" stroke="#1f1d1a" stroke-width="1.5"/>
+    <text x="${x+ww/2}" y="${yy(h)-6}" text-anchor="middle" font-size="16">${fmtHrs(Math.round(h*10)/10)}</text>
+    ${need[k]?`<line x1="${x-8}" x2="${x+ww+8}" y1="${yy(need[k])}" y2="${yy(need[k])}" stroke="#c62828" stroke-width="4"/>`:''}
+    <text x="${x+ww/2}" y="${H-10}" text-anchor="middle" font-size="19">${DAYN[k]} ${+diaDe(k).slice(8)}</text></g>`}).join('');
+  const nomeF=id=>{const f=S.fmap&&S.fmap[id];return f?f.nome:'Semana'};
+  const ord=[...E,...A].slice(0,8).map(x=>`<li><span class="sem ${x.nivel==='erro'?'e':''}"></span><div><b>${esc(nomeF(x.funcionario_id))}</b>${x.dia?' · '+DAYN[(new Date(x.dia+'T00:00:00Z').getUTCDay()+6)%7]+' '+x.dia.slice(8):''}<br><span class="muted">${esc(x.mensagem||x.codigo)}</span></div></li>`).join('');
+  const est=['rascunho','em_validacao','publicado'],ix=est.indexOf(w.estado),lb=['Rascunho','Em validação','Publicado'];
+  const kpi=(t,val,sub,c)=>`<div class="card kpi"><small>${t}</small><b style="color:${c||'inherit'}">${val}</b><span>${sub}</span></div>`;
+  m.innerHTML=`<div class="kpis">
+    ${kpi('Horas planeadas',fmtHrs(Math.round(hTot*10)/10)+' h',pessoas+' pessoas · '+S.turnos.length+' turnos')}
+    ${kpi('Horas necessárias',temV?fmtHrs(Math.round(hNec*10)/10)+' h':'—',temV?'guia de posicionamento e vendas previstas':'sem vendas previstas para esta semana',temV&&hTot<hNec?'var(--warn)':'')}
+    ${kpi('Alertas',E.length+A.length,E.length+' erro(s) · '+A.length+' aviso(s)',E.length?'var(--err)':A.length?'var(--warn)':'var(--ok)')}
+    ${kpi('Cobertura 30 min',cob==null?'—':cob+' %',cob==null?'sem vendas previstas':okI+' de '+totI+' intervalos sem défice',cob==null?'':cob>=90?'var(--ok)':'var(--warn)')}</div>
+  <div class="dgrid">
+    <div class="card pad"><h2>Horas por dia</h2><p class="sub">Barra amarela: horas planeadas. Traço vermelho: horas necessárias segundo as vendas previstas. Clica numa barra para abrir o dia.</p>
+      <svg class="chart" viewBox="0 0 ${W} ${H}" width="100%" role="img" aria-label="Horas planeadas por dia">${grid}${bars}</svg></div>
+    <div class="card pad"><h2>O que precisa de atenção</h2><p class="sub">Ordenado por gravidade.${E.length+A.length>8?' A mostrar 8 de '+(E.length+A.length)+'.':''}</p>
+      ${ord?`<ul class="alist">${ord}</ul>`:'<div class="muted">Sem alertas nesta semana.</div>'}</div></div>
+  <div class="card pad"><h2>Estado da semana</h2><p class="sub">Uma semana publicada fica bloqueada. Qualquer alteração depois disso pede motivo e gera aviso T, D ou T+.</p>
+    <div class="steps">${lb.map((t,n)=>`<span class="${n===ix?'on':n<ix?'done':''}">${t}</span>`).join('')}</div></div>`}
 
 /* ---------- Disponibilidades e ausências ---------- */
 function rDisp(){
