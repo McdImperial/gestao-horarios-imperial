@@ -1,0 +1,356 @@
+<!doctype html>
+<html lang="pt-PT">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Gestão de Horários — McDonald's Imperial</title>
+<style>
+:root{--red:#da291c;--yel:#ffc72c;--ink:#1f1d1a;--mut:#6b665f;--line:#e4e0d8;--bg:#f6f4ef;--card:#fff;--ok:#2e7d32;--warn:#b26a00;--err:#c62828;--bar:#274b7a}
+*{box-sizing:border-box}
+body{margin:0;font:14px/1.4 system-ui,-apple-system,"Segoe UI",Roboto,sans-serif;background:var(--bg);color:var(--ink)}
+header{background:#fff;border-bottom:3px solid var(--yel);padding:10px 16px;display:flex;flex-wrap:wrap;gap:10px;align-items:center;position:sticky;top:0;z-index:20}
+header h1{font-size:17px;margin:0 8px 0 0}
+header h1 b{color:var(--red)}
+button,select,input{font:inherit}
+.btn{border:1px solid var(--line);background:#fff;border-radius:8px;padding:6px 11px;cursor:pointer}
+.btn:hover{border-color:#bbb}
+.btn.pri{background:var(--red);color:#fff;border-color:var(--red)}
+.btn.ok{background:var(--ok);color:#fff;border-color:var(--ok)}
+.btn[disabled]{opacity:.45;cursor:not-allowed}
+.tabs{display:flex;gap:4px;padding:8px 16px 0;background:#fff;border-bottom:1px solid var(--line);flex-wrap:wrap}
+.tab{padding:8px 14px;border:0;background:none;cursor:pointer;border-bottom:3px solid transparent;color:var(--mut)}
+.tab[aria-selected=true]{color:var(--ink);border-color:var(--red);font-weight:600}
+main{padding:14px 16px 60px}
+.badge{padding:2px 9px;border-radius:99px;font-size:12px;font-weight:600;background:#eee}
+.badge.rascunho{background:#fff3cd;color:#7a5a00}.badge.em_validacao{background:#dbe9ff;color:#1d4b8f}.badge.publicado{background:#d9f2dc;color:#1b5e20}
+.sp{flex:1}
+.days{display:flex;gap:6px;margin-bottom:10px;flex-wrap:wrap}
+.day{border:1px solid var(--line);background:#fff;border-radius:8px;padding:5px 10px;cursor:pointer;text-align:center;min-width:64px}
+.day small{display:block;color:var(--mut)}
+.day[aria-selected=true]{border-color:var(--red);box-shadow:inset 0 -3px 0 var(--red)}
+.day .dot{color:var(--err);font-weight:700}
+.card{background:var(--card);border:1px solid var(--line);border-radius:10px;overflow:auto}
+table.g{border-collapse:separate;border-spacing:0;width:100%}
+.g th,.g td{border-bottom:1px solid #efece5;padding:0;vertical-align:middle}
+.g thead th{position:sticky;top:0;background:#faf8f3;font-size:11px;color:var(--mut);font-weight:600;z-index:5;height:26px}
+.nm{padding:4px 8px;min-width:170px;max-width:210px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;position:sticky;left:0;background:#fff;z-index:4}
+.dsp{padding:4px 6px;min-width:84px;font-size:12px;color:var(--mut);white-space:nowrap}
+.alr{width:34px;text-align:center}
+.sym{display:inline-block;width:22px;height:22px;line-height:22px;border-radius:50%;font-weight:700;font-size:13px;cursor:help;color:#fff}
+.sym.e{background:var(--err)}.sym.w{background:var(--yel);color:#4a3600}.sym.o{background:#e3f1e4;color:var(--ok)}
+.tl{position:relative;height:34px;min-width:960px;background-image:repeating-linear-gradient(90deg,#efece5 0,#efece5 1px,transparent 1px,transparent 40px)}
+.tl .h{position:absolute;top:0;bottom:0;border-left:1px solid #d9d4c8}
+.bar{position:absolute;top:5px;height:24px;border-radius:5px;background:var(--bar);color:#fff;font-size:11px;display:flex;align-items:center;padding:0 6px;white-space:nowrap;overflow:hidden;cursor:grab;touch-action:none;user-select:none}
+.bar.err{background:var(--err);outline:2px solid #ffb3ad}
+.bar.warn{background:#c98a00}
+.bar .gp{position:absolute;top:0;bottom:0;background:repeating-linear-gradient(45deg,#fff,#fff 3px,#e5e5e5 3px,#e5e5e5 6px);opacity:.92;border-left:1px solid #0003;border-right:1px solid #0003}
+.bar .rz{position:absolute;top:0;bottom:0;width:7px;cursor:ew-resize}
+.bar .rz.l{left:0}.bar .rz.r{right:0}
+.bar .tx{position:relative;z-index:2;pointer-events:none;text-shadow:0 0 3px #0008}
+.chip{position:absolute;left:4px;top:5px;height:24px;line-height:24px;padding:0 10px;border-radius:5px;font-weight:600;font-size:12px;background:#eee}
+.cov td{font-size:10px;text-align:center;background:#faf8f3;color:var(--mut)}
+.covrow{display:flex;min-width:960px}.covrow span{flex:0 0 20px;text-align:center;font-size:10px;padding:3px 0}
+.c0{background:#fbe3e1;color:#8a1a12}.c1{background:#fff4cf;color:#6b5100}.c2{background:#e3f3e5;color:#1b5e20}
+.muted{color:var(--mut)}
+.wk td,.wk th{padding:4px 7px;border-bottom:1px solid #efece5;border-right:1px solid #f1eee7;font-size:12px;white-space:nowrap}
+.wk thead th{position:sticky;top:0;background:#faf8f3}
+.wk td.nm{border-right:1px solid var(--line)}
+.cell{border-radius:4px;padding:2px 5px;display:inline-block;min-width:74px;text-align:center}
+.cell.er{outline:2px solid var(--err)}
+dialog{border:0;border-radius:12px;padding:0;max-width:520px;width:calc(100% - 24px);box-shadow:0 12px 40px #0004}
+dialog::backdrop{background:#0005}
+.dh{padding:14px 18px;border-bottom:1px solid var(--line);font-weight:700}
+.db{padding:14px 18px;display:grid;grid-template-columns:1fr 1fr;gap:10px}
+.db label{display:flex;flex-direction:column;font-size:12px;color:var(--mut);gap:3px}
+.db input,.db select{padding:7px;border:1px solid var(--line);border-radius:7px;font-size:14px;color:var(--ink)}
+.db .full{grid-column:1/-1}
+.msgs{grid-column:1/-1;display:flex;flex-direction:column;gap:4px}
+.msgs div{padding:6px 9px;border-radius:7px;font-size:13px}
+.msgs .e{background:#fde7e5;color:#8a1a12}.msgs .w{background:#fff4cf;color:#6b5100}.msgs .i{background:#e8f0fb;color:#1d4b8f}
+.df{padding:12px 18px;border-top:1px solid var(--line);display:flex;gap:8px;justify-content:flex-end;flex-wrap:wrap}
+#tip{position:fixed;z-index:99;background:#1f1d1a;color:#fff;padding:7px 10px;border-radius:7px;font-size:12px;max-width:300px;display:none;pointer-events:none;white-space:pre-line}
+#toast{position:fixed;bottom:16px;left:50%;transform:translateX(-50%);background:#1f1d1a;color:#fff;padding:9px 16px;border-radius:9px;display:none;z-index:100;max-width:90%}
+#toast.bad{background:var(--err)}
+.empty{padding:40px;text-align:center;color:var(--mut)}
+.legend{display:flex;gap:12px;font-size:12px;color:var(--mut);margin:8px 2px;flex-wrap:wrap;align-items:center}
+.legend i{display:inline-block;width:14px;height:10px;border-radius:2px;vertical-align:middle;margin-right:4px}
+@media(max-width:700px){.dsp{display:none}}
+</style>
+</head>
+<body>
+<header>
+  <h1>Gestão de <b>Horários</b></h1>
+  <select id="wsel" class="btn" aria-label="Semana"></select>
+  <button class="btn" id="wprev" title="Semana anterior">‹</button>
+  <button class="btn" id="wnext" title="Semana seguinte">›</button>
+  <span id="wbadge" class="badge"></span>
+  <span class="sp"></span>
+  <button class="btn" id="bnew">Nova semana</button>
+  <button class="btn" id="bcopy">Copiar para a seguinte</button>
+  <button class="btn" id="breload" title="Atualizar">↻</button>
+  <button class="btn pri" id="bvalid">Enviar para validação</button>
+  <button class="btn ok" id="bpub">Publicar</button>
+</header>
+<div class="tabs" role="tablist">
+  <button class="tab" role="tab" data-t="dia">Planeamento diário</button>
+  <button class="tab" role="tab" data-t="sem">Escala semanal</button>
+  <button class="tab" role="tab" data-t="func">Funcionários</button>
+</div>
+<main id="main"><div class="empty">A carregar…</div></main>
+<div id="tip"></div><div id="toast"></div>
+<dialog id="dlg"></dialog>
+
+<script src="supabase.js"></script>
+<script>
+(function(){
+"use strict";
+const URL_='https://tmcigrzsztbsavsiauoy.supabase.co',KEY='sb_publishable_qhsUxvCTk7y7gpsmGwMahg_vovj7x7l';
+const sb=supabase.createClient(URL_,KEY,{auth:{persistSession:true,autoRefreshToken:true,storageKey:'mcdimp-auth',detectSessionInUrl:false}});
+const TZ='Europe/Lisbon',DAYN=['Seg','Ter','Qua','Qui','Sex','Sáb','Dom'],OP=7; // dia operacional começa às 07:00
+const $=s=>document.querySelector(s);
+const esc=s=>String(s==null?'':s).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+const S={papel:null,semanas:[],sem:null,tab:'dia',dia:0,func:[],tipos:{},disp:{},turnos:[],aus:[],val:[],rules:{pausa_ok:4.5,pausa_max:5,trecho_min:2,dia_max:10}};
+const canEdit=()=>['administrador','editor'].includes(S.papel), canPub=()=>S.papel==='administrador';
+
+/* ---------- tempo (Europe/Lisbon) ---------- */
+const dtf=new Intl.DateTimeFormat('en-GB',{timeZone:TZ,hourCycle:'h23',year:'numeric',month:'2-digit',day:'2-digit',hour:'2-digit',minute:'2-digit'});
+function parts(d){const o={};dtf.formatToParts(d).forEach(p=>o[p.type]=+p.value);return o}
+function lisbon(dateStr,h,m){ // data civil + hora local -> Date (UTC correto, DST incluído)
+  const [y,mo,d]=dateStr.split('-').map(Number);let g=Date.UTC(y,mo-1,d,h,m);
+  for(let i=0;i<2;i++){const p=parts(new Date(g));const asUtc=Date.UTC(p.year,p.month-1,p.day,p.hour,p.minute);g+=Date.UTC(y,mo-1,d,h,m)-asUtc}
+  return new Date(g)}
+const addDays=(s,n)=>{const [y,m,d]=s.split('-').map(Number);return new Date(Date.UTC(y,m-1,d+n)).toISOString().slice(0,10)};
+const p2=n=>String(n).padStart(2,'0');
+const hhmm=d=>{const p=parts(d);return p2(p.hour)+':'+p2(p.minute)};
+const fmtD=s=>{const [y,m,d]=s.split('-');return d+'/'+m};
+const fmtH=h=>{const t=Math.round(h*60);return Math.floor(t/60)+'h'+(t%60?p2(t%60):'')};
+const fmtHrs=n=>(Math.round(n*100)/100).toString().replace('.',',');
+const fmtAv=h=>{const x=((h%24)+24)%24;return p2(Math.floor(x))+':'+p2(Math.round((x%1)*60))+(h>=24?'⁺¹':'')};
+function toast(m,bad){const t=$('#toast');t.textContent=m;t.className=bad?'bad':'';t.style.display='block';clearTimeout(toast.k);toast.k=setTimeout(()=>t.style.display='none',bad?6000:2500)}
+function tip(e,txt){const t=$('#tip');if(!txt){t.style.display='none';return}t.textContent=txt;t.style.display='block';const r=t.getBoundingClientRect();t.style.left=Math.min(e.clientX+12,innerWidth-r.width-8)+'px';t.style.top=(e.clientY+14>innerHeight-r.height?e.clientY-r.height-8:e.clientY+14)+'px'}
+document.addEventListener('mousemove',e=>{const s=e.target.closest&&e.target.closest('[data-tip]');tip(e,s?s.dataset.tip:null)});
+document.addEventListener('scroll',()=>tip(null,null),true);
+
+/* ---------- dados ---------- */
+async function boot(){
+  const {data:{session}}=await sb.auth.getSession();
+  if(!session){$('#main').innerHTML='<div class="empty">Sessão não iniciada.<br><br><a class="btn pri" href="/">Entrar na app</a></div>';return}
+  const {data:p}=await sb.from('perfis').select('papel,estado').eq('id',session.user.id).maybeSingle();
+  if(!p||p.estado!=='ativo'){$('#main').innerHTML='<div class="empty">Sem acesso a este módulo.</div>';return}
+  S.papel=p.papel;
+  const [f,d,t,r]=await Promise.all([
+    sb.from('gh_funcionarios').select('id,mec,nome,funcao,contrato_horas').eq('ativo',true).order('nome'),
+    sb.from('gh_disponibilidades').select('funcionario_id,dia_semana,hora_ini,hora_fim').limit(5000),
+    sb.from('gh_tipos_ausencia').select('*').order('ordem'),
+    sb.from('gh_regras').select('chave,valor,vigor_desde').in('chave',['pausa_ok','pausa_max','trecho_min','dia_max']).order('vigor_desde')]);
+  if(f.error){$('#main').innerHTML='<div class="empty">Sem permissão para ler os dados.</div>';return}
+  S.func=f.data;S.fmap=Object.fromEntries(f.data.map(x=>[x.id,x]));
+  (t.data||[]).forEach(x=>S.tipos[x.codigo]=x);
+  (d.data||[]).forEach(x=>{(S.disp[x.funcionario_id]??={})[x.dia_semana]=x});
+  (r.data||[]).forEach(x=>S.rules[x.chave]=+x.valor);
+  await loadSemanas();
+  const hoje=addDays(new Date().toISOString().slice(0,10),0);
+  S.sem=S.semanas.find(w=>w.inicio<=hoje&&addDays(w.inicio,6)>=hoje)||S.semanas[S.semanas.length-1]||null;
+  if(S.sem&&S.sem.inicio<=hoje&&addDays(S.sem.inicio,6)>=hoje)S.dia=Math.max(0,Math.min(6,Math.round((Date.parse(hoje)-Date.parse(S.sem.inicio))/864e5)));
+  await loadSemana();
+}
+async function loadSemanas(){const {data}=await sb.from('gh_semanas').select('*').order('inicio');S.semanas=data||[];
+  $('#wsel').innerHTML=S.semanas.map(w=>`<option value="${w.id}">S${w.semana_iso} · ${fmtD(w.inicio)}–${fmtD(addDays(w.inicio,6))}</option>`).join('')||'<option>Sem semanas</option>'}
+async function loadSemana(){
+  if(!S.sem){render();return}
+  S.sem=S.semanas.find(w=>w.id===S.sem.id)||S.sem;$('#wsel').value=S.sem.id;
+  const i=S.sem.inicio,fim=addDays(i,6);
+  const [t,a,v]=await Promise.all([
+    sb.from('gh_turnos').select('*').eq('semana_id',S.sem.id).order('inicio'),
+    sb.from('gh_ausencias').select('funcionario_id,tipo,de,ate').eq('estado','aprovada').lte('de',fim).gte('ate',i),
+    sb.rpc('gh_validar_semana',{p_semana:S.sem.id})]);
+  S.turnos=t.data||[];S.aus=a.data||[];S.val=v.data||[];render()}
+
+/* ---------- cálculos ---------- */
+const diaDe=k=>addDays(S.sem.inicio,k);
+const ausDe=(fid,dia)=>S.aus.find(a=>a.funcionario_id===fid&&a.de<=dia&&a.ate>=dia);
+function horas(t){const ms=(x,y)=>x&&y?Date.parse(y)-Date.parse(x):0;return (Date.parse(t.fim)-Date.parse(t.inicio)-ms(t.pausa_inicio,t.pausa_fim)-ms(t.pausa2_inicio,t.pausa2_fim))/36e5}
+function valDe(fid,dia){return S.val.filter(v=>v.funcionario_id===fid&&v.dia===dia)}
+function valSem(fid){return S.val.filter(v=>v.funcionario_id===fid&&!v.dia)}
+const worst=l=>l.some(x=>x.nivel==='erro')?'erro':l.length?'aviso':null;
+const nErros=()=>S.val.filter(v=>v.nivel==='erro').length;
+
+/* ---------- renderização ---------- */
+function render(){
+  const w=S.sem;
+  $('#wbadge').textContent=w?({rascunho:'Rascunho',em_validacao:'Em validação',publicado:'Publicado'}[w.estado]||w.estado):'';
+  $('#wbadge').className='badge '+(w?w.estado:'');
+  document.querySelectorAll('.tab').forEach(b=>b.setAttribute('aria-selected',b.dataset.t===S.tab));
+  $('#bnew').disabled=!canEdit();$('#bcopy').disabled=!canEdit()||!w;
+  $('#bvalid').disabled=!canEdit()||!w||w.estado==='publicado';$('#bpub').disabled=!canPub()||!w||w.estado==='publicado';
+  const m=$('#main');
+  if(S.tab==='func')return m.innerHTML=rFunc();
+  if(!w)return m.innerHTML='<div class="empty">Ainda não há semanas. '+(canEdit()?'Cria a primeira em «Nova semana».':'')+'</div>';
+  if(S.tab==='sem')m.innerHTML=rSem();else{m.innerHTML=rDia();bindDia()}
+}
+function rFunc(){return `<div class="card"><table class="wk" style="width:100%"><thead><tr><th>Mec.</th><th>Nome</th><th>Função</th><th>Contrato (h/sem)</th></tr></thead><tbody>${S.func.map(f=>`<tr><td>${f.mec}</td><td>${esc(f.nome)}</td><td>${esc(f.funcao||'')}</td><td>${f.contrato_horas}</td></tr>`).join('')}</tbody></table></div>`}
+
+function rSem(){
+  const hd=[...Array(7)].map((_,k)=>`<th>${DAYN[k]}<br>${fmtD(diaDe(k))}</th>`).join('');
+  const rows=S.func.map(f=>{
+    const ts=S.turnos.filter(t=>t.funcionario_id===f.id);let tot=0;
+    const cells=[...Array(7)].map((_,k)=>{const d=diaDe(k),t=ts.find(x=>x.dia===d),a=ausDe(f.id,d),vs=valDe(f.id,d),er=vs.some(x=>x.nivel==='erro');
+      if(t){tot+=horas(t);const c=t.codigo&&S.tipos[t.codigo];return `<td><span class="cell ${er?'er':''}" style="background:${c&&c.cor||'#e9eef7'};color:${c&&c.cor_texto||'inherit'}" data-tip="${esc(vs.map(v=>v.mensagem).join('\n'))}" data-go="${k}">${hhmm(new Date(t.inicio))}–${hhmm(new Date(t.fim))}${t.codigo?' '+esc(t.codigo):''}</span></td>`}
+      if(a){const c=S.tipos[a.tipo]||{};return `<td><span class="cell" style="background:${c.cor||'transparent'};color:${c.cor_texto||'inherit'};font-weight:600">${esc(a.tipo)}</span></td>`}
+      return '<td class="muted">—</td>'}).join('');
+    if(!ts.length&&!S.aus.some(a=>a.funcionario_id===f.id))return '';
+    const sv=valSem(f.id);const over=tot>f.contrato_horas+.01;
+    return `<tr><td class="nm">${esc(f.nome)}</td>${cells}<td><b ${over?'style="color:var(--warn)" data-tip="'+esc(sv.map(v=>v.mensagem).join('\n'))+'"':''}>${fmtHrs(tot)}</b> / ${f.contrato_horas}</td></tr>`}).join('');
+  return `<div class="card"><table class="wk" style="width:100%"><thead><tr><th>Funcionário</th>${hd}<th>Horas / contrato</th></tr></thead><tbody>${rows}</tbody></table></div>`;
+}
+
+function rDia(){
+  const k=S.dia,dia=diaDe(k),ax0=lisbon(dia,OP,0).getTime();
+  const days=[...Array(7)].map((_,i)=>{const e=S.val.some(v=>v.dia===diaDe(i)&&v.nivel==='erro');return `<button class="day" data-d="${i}" aria-selected="${i===k}">${DAYN[i]}<small>${fmtD(diaDe(i))}</small>${e?'<span class="dot">●</span>':''}</button>`}).join('');
+  const PX=40;// 40px por hora -> 960px
+  const hours=[...Array(24)].map((_,i)=>`<span class="h" style="left:${i*PX}px"></span>`).join('');
+  const head=[...Array(24)].map((_,i)=>`<span style="position:absolute;left:${i*PX+3}px">${p2((OP+i)%24)}</span>`).join('');
+  const ids=new Set();S.turnos.filter(t=>t.dia===dia).forEach(t=>ids.add(t.funcionario_id));
+  S.aus.forEach(a=>{if(a.de<=dia&&a.ate>=dia)ids.add(a.funcionario_id)});
+  const list=[...ids].map(id=>S.fmap[id]).filter(Boolean);
+  const first=f=>{const ts=S.turnos.filter(t=>t.dia===dia&&t.funcionario_id===f.id);return ts.length?Date.parse(ts[0].inicio):9e15};
+  list.sort((a,b)=>first(a)-first(b)||a.nome.localeCompare(b.nome));
+  const cov=new Array(48).fill(0);
+  const rows=list.map(f=>{
+    const ts=S.turnos.filter(t=>t.dia===dia&&t.funcionario_id===f.id),a=ausDe(f.id,dia),vs=valDe(f.id,dia),w=worst(vs);
+    const dp=S.disp[f.id]&&S.disp[f.id][k];const dtxt=dp?fmtAv(dp.hora_ini)+'–'+fmtAv(dp.hora_fim):'sem disp.';
+    let bars='';
+    ts.forEach(t=>{
+      const s=(Date.parse(t.inicio)-ax0)/36e5*PX,e=(Date.parse(t.fim)-ax0)/36e5*PX,wd=Math.max(e-s,8);
+      const pz=[[t.pausa_inicio,t.pausa_fim],[t.pausa2_inicio,t.pausa2_fim]].filter(x=>x[0]).map(x=>`<span class="gp" data-tip="Pausa ${hhmm(new Date(x[0]))}–${hhmm(new Date(x[1]))}" style="left:${(Date.parse(x[0])-Date.parse(t.inicio))/36e5*PX}px;width:${(Date.parse(x[1])-Date.parse(x[0]))/36e5*PX}px"></span>`).join('');
+      for(let i=0;i<48;i++){const sl=ax0+i*18e5;if(Date.parse(t.inicio)<=sl&&Date.parse(t.fim)>sl){const inP=[[t.pausa_inicio,t.pausa_fim],[t.pausa2_inicio,t.pausa2_fim]].some(x=>x[0]&&Date.parse(x[0])<=sl&&Date.parse(x[1])>sl);if(!inP)cov[i]++}}
+      const c=t.codigo&&S.tipos[t.codigo];
+      bars+=`<div class="bar ${w==='erro'?'err':w==='aviso'?'warn':''}" data-t="${t.id}" style="left:${s}px;width:${wd}px;${!w&&c?'background:'+c.cor+';color:'+c.cor_texto:''}">${canEdit()?'<i class="rz l"></i><i class="rz r"></i>':''}${pz}<span class="tx">${hhmm(new Date(t.inicio))}–${hhmm(new Date(t.fim))} · ${fmtHrs(horas(t))}h${t.codigo?' · '+esc(t.codigo):''}</span></div>`});
+    if(a){const c=S.tipos[a.tipo]||{};bars+=`<span class="chip" style="background:${c.cor||'#eee'};color:${c.cor_texto||'inherit'}" data-tip="${esc(c.nome||a.tipo)}">${esc(a.tipo)}</span>`}
+    const sym=w==='erro'?'<span class="sym e" data-tip="'+esc(vs.map(v=>(v.nivel==='erro'?'✕ ':'! ')+v.mensagem).join('\n'))+'">✕</span>':w?'<span class="sym w" data-tip="'+esc(vs.map(v=>'! '+v.mensagem).join('\n'))+'">!</span>':ts.length?'<span class="sym o">✓</span>':'';
+    return `<tr data-f="${f.id}"><td class="nm" title="${esc(f.nome)}">${esc(f.nome)}</td><td class="dsp">${dtxt}</td><td class="alr">${sym}</td><td><div class="tl" data-f="${f.id}">${hours}${bars}</div></td></tr>`}).join('');
+  const covr=cov.map((n,i)=>`<span class="${n<(S.rules.cobertura_min||2)?'c0':n<(S.rules.cobertura_min||2)+2?'c1':'c2'}" data-tip="${p2((OP+Math.floor(i/2))%24)}:${i%2?'30':'00'} · ${n} pessoa(s)">${n}</span>`).join('');
+  return `<div class="days">${days}</div>
+  <div class="legend"><span><i style="background:var(--bar)"></i>Turno</span><span><i style="background:repeating-linear-gradient(45deg,#fff,#fff 3px,#ddd 3px,#ddd 6px)"></i>Pausa (até 2)</span><span><i style="background:var(--err)"></i>Erro</span><span><i style="background:#c98a00"></i>Alerta</span>${canEdit()?'<span>Arrasta a barra ou as pontas (passos de 30 min) · clica para editar</span>':'<span>Só leitura</span>'}
+  <span class="sp"></span>${canEdit()?'<button class="btn" id="badd">+ Turno</button>':''}</div>
+  <div class="card"><table class="g"><thead><tr><th class="nm">Funcionário</th><th class="dsp">Disponib.</th><th class="alr">⚠</th><th><div class="tl" style="height:22px;background:none">${head}</div></th></tr></thead><tbody>${rows||'<tr><td colspan="4" class="empty">Sem turnos neste dia.</td></tr>'}
+  <tr class="cov"><td class="nm"><b>Pessoas em loja</b></td><td></td><td></td><td><div class="covrow">${covr}</div></td></tr></tbody></table></div>`;
+}
+
+/* ---------- interação do planeamento ---------- */
+function bindDia(){
+  document.querySelectorAll('.day').forEach(b=>b.onclick=()=>{S.dia=+b.dataset.d;render()});
+  const add=$('#badd');if(add)add.onclick=()=>openEd(null);
+  document.querySelectorAll('.bar').forEach(el=>{
+    const t=S.turnos.find(x=>x.id===el.dataset.t);if(!t)return;
+    el.addEventListener('pointerdown',e=>{
+      if(!canEdit()||e.button)return;
+      const mode=e.target.classList.contains('l')?'l':e.target.classList.contains('r')?'r':'m';
+      const x0=e.clientX,ini=Date.parse(t.inicio),fim=Date.parse(t.fim);let dm=0,moved=false;
+      el.setPointerCapture(e.pointerId);
+      const mv=ev=>{const d=ev.clientX-x0;if(Math.abs(d)>3)moved=true;dm=Math.round(d/40*2)*18e5;if(!moved)return;
+        let ni=ini+(mode!=='r'?dm:0),nf=fim+(mode!=='l'?dm:0);if(nf-ni<18e5){if(mode==='l')ni=nf-18e5;else nf=ni+18e5}
+        const ax0=lisbon(diaDe(S.dia),OP,0).getTime();el.style.left=(ni-ax0)/36e5*40+'px';el.style.width=(nf-ni)/36e5*40+'px';el.dataset.ni=ni;el.dataset.nf=nf};
+      const up=async()=>{el.removeEventListener('pointermove',mv);el.removeEventListener('pointerup',up);
+        if(!moved){openEd(t);return}
+        const ni=+el.dataset.ni,nf=+el.dataset.nf;if(!ni)return render();
+        await saveTurno(t,{inicio:new Date(ni),fim:new Date(nf)},true)};
+      el.addEventListener('pointermove',mv);el.addEventListener('pointerup',up)});
+  });
+}
+
+/* ---------- gravar ---------- */
+async function saveTurno(t,ch,shift){
+  // ch: inicio/fim (Date); mantém as pausas na mesma posição relativa ao início quando se arrasta a barra inteira
+  const ini=ch.inicio.getTime(),fim=ch.fim.getTime(),oi=Date.parse(t.inicio),delta=ini-oi;
+  const mv=x=>x?new Date(Date.parse(x)+((shift&&fim-ini===Date.parse(t.fim)-oi)?delta:0)):null;
+  const clamp=x=>x&&x.getTime()>=ini&&x.getTime()<=fim?x:null;
+  const a=clamp(mv(t.pausa_inicio)),b=a?clamp(mv(t.pausa_fim)):null,c=b?clamp(mv(t.pausa2_inicio)):null,d=c?clamp(mv(t.pausa2_fim)):null;
+  return rpcSave({p_turno:t.id,p_func:t.funcionario_id,p_inicio:ch.inicio,p_fim:ch.fim,p_pausa_ini:a&&b?a:null,p_pausa_fim:a&&b?b:null,p_pausa2_ini:c&&d?c:null,p_pausa2_fim:c&&d?d:null,p_modelo:t.modelo,p_versao:t.versao,p_codigo:t.codigo})}
+async function rpcSave(p,extra){
+  const args={p_turno:null,p_semana:S.sem.id,p_pausa_ini:null,p_pausa_fim:null,p_pausa2_ini:null,p_pausa2_fim:null,p_modelo:null,p_versao:null,p_tipo_aviso:null,p_motivo:null,p_codigo:null,...p,...(extra||{})};
+  ['p_inicio','p_fim','p_pausa_ini','p_pausa_fim','p_pausa2_ini','p_pausa2_fim'].forEach(k=>{if(args[k] instanceof Date)args[k]=args[k].toISOString()});
+  let r=await sb.rpc('gh_guardar_turno',args);
+  if(r.error&&S.sem.estado==='publicado'&&!args.p_tipo_aviso){const av=await askAviso();if(!av){await loadSemana();return false}r=await sb.rpc('gh_guardar_turno',{...args,p_tipo_aviso:av.tipo,p_motivo:av.motivo})}
+  if(r.error){toast(r.error.message,true);await loadSemana();return false}
+  await loadSemana();toast('Guardado');return true}
+function askAviso(){return new Promise(res=>{const d=$('#dlg');
+  d.innerHTML=`<div class="dh">Semana já publicada</div><div class="db"><div class="msgs"><div class="i">Alterações depois da publicação ficam registadas com o tipo de aviso e o motivo.</div></div>
+  <label>Tipo<select id="av_t"><option value="T">T — Temporário</option><option value="D">D — Definitivo</option><option value="T+">T+ — Temporário até…</option></select></label>
+  <label class="full">Motivo<input id="av_m" placeholder="Ex.: ajuste por vendas"></label></div>
+  <div class="df"><button class="btn" id="av_c">Cancelar</button><button class="btn pri" id="av_o">Confirmar</button></div>`;
+  let done=false;const fin=v=>{if(done)return;done=true;d.close();res(v)};
+  $('#av_c').onclick=()=>fin(null);d.onclose=()=>fin(null);
+  $('#av_o').onclick=()=>{const m=$('#av_m').value.trim();if(!m){$('#av_m').focus();return}fin({tipo:$('#av_t').value,motivo:m})};d.showModal()})}
+
+/* ---------- editor de turno ---------- */
+function openEd(t){
+  const dia=diaDe(S.dia),d=$('#dlg'),ed=canEdit();
+  const used=new Set(S.turnos.filter(x=>x.dia===dia).map(x=>x.funcionario_id));
+  const tm=x=>x?hhmm(new Date(x)):'';
+  const cods=Object.values(S.tipos).filter(x=>x.categoria==='trabalho');
+  d.innerHTML=`<div class="dh">${t?'Editar turno':'Novo turno'} · ${DAYN[S.dia]} ${fmtD(dia)}</div><div class="db">
+  <label class="full">Funcionário<select id="e_f" ${t?'disabled':''}>${(t?S.func.filter(f=>f.id===t.funcionario_id):S.func.filter(f=>!used.has(f.id))).map(f=>`<option value="${f.id}">${esc(f.nome)} (${f.contrato_horas}h)</option>`).join('')}</select></label>
+  <label>Entrada<input type="time" id="e_i" step="900" value="${tm(t&&t.inicio)}"></label>
+  <label>Saída<input type="time" id="e_o" step="900" value="${tm(t&&t.fim)}"></label>
+  <label>1.ª pausa — início<input type="time" id="e_p1i" step="900" value="${tm(t&&t.pausa_inicio)}"></label>
+  <label>1.ª pausa — fim<input type="time" id="e_p1f" step="900" value="${tm(t&&t.pausa_fim)}"></label>
+  <label>2.ª pausa — início<input type="time" id="e_p2i" step="900" value="${tm(t&&t.pausa2_inicio)}"></label>
+  <label>2.ª pausa — fim<input type="time" id="e_p2f" step="900" value="${tm(t&&t.pausa2_fim)}"></label>
+  <label class="full">Código (opcional)<select id="e_c"><option value="">— nenhum —</option>${cods.map(c=>`<option value="${c.codigo}" ${t&&t.codigo===c.codigo?'selected':''}>${c.codigo} · ${esc(c.nome)}</option>`).join('')}</select></label>
+  <div class="msgs" id="e_m"></div></div>
+  <div class="df">${t&&ed?'<button class="btn" id="e_x" style="color:var(--err);margin-right:auto">Remover</button>':''}<button class="btn" id="e_c0">${ed?'Cancelar':'Fechar'}</button>${ed?'<button class="btn pri" id="e_s">Guardar</button>':''}</div>`;
+  const q=s=>d.querySelector(s);
+  function read(){ // converte horas em instantes, sempre em sequência a partir do dia operacional
+    const g=id=>q(id).value;let last=null;
+    const mk=(v,base)=>{if(!v)return null;const [h,m]=v.split(':').map(Number);let x=lisbon(dia,h,m);
+      if(!base){if(h<OP)x=lisbon(addDays(dia,1),h,m)}else if(x.getTime()<base.getTime())x=lisbon(addDays(dia,1),h,m);return x};
+    const i=mk(g('#e_i'),null),o=mk(g('#e_o'),i),a=mk(g('#e_p1i'),i),b=mk(g('#e_p1f'),a),c=mk(g('#e_p2i'),b||a),e=mk(g('#e_p2f'),c);return {i,o,a,b,c,e}}
+  function check(){const r=read(),m=[];let hard=false;const E=s=>{m.push(['e',s]);hard=true},W=s=>m.push(['w',s]);
+    const H=(x,y)=>(y-x)/36e5,R=S.rules;
+    if(!r.i||!r.o)E('Indica entrada e saída.');
+    else{
+      if(!!r.a!==!!r.b)E('A 1.ª pausa precisa de início e fim.');
+      if(!!r.c!==!!r.e)E('A 2.ª pausa precisa de início e fim.');
+      if(r.c&&!r.a)E('A 2.ª pausa exige a 1.ª.');
+      if(r.a&&(r.a<r.i||r.b>r.o))E('A pausa tem de ficar dentro do turno.');
+      if(r.c&&r.b&&(r.c<r.b||r.e>r.o))E('A 2.ª pausa tem de ficar depois da 1.ª e dentro do turno.');
+      const tr=[];if(r.a&&r.b)tr.push([1,H(r.i,r.a)]);if(r.c&&r.e)tr.push([2,H(r.b,r.c)]);
+      tr.forEach(([n,h])=>{if(h>R.pausa_max+1e-4)E(`Pausa ${n}: ${fmtH(h)} de trabalho seguido (máximo ${fmtH(R.pausa_max)}).`);else if(h>R.pausa_ok+1e-4)W(`Alerta: pausa ${n} depois de ${fmtH(h)} de trabalho.`);
+        if(r.c&&h<R.trecho_min-1e-4)E(`Com duas pausas, só ${fmtH(h)} de trabalho antes da pausa ${n} (mínimo ${fmtH(R.trecho_min)}).`)});
+      if(!r.a&&H(r.i,r.o)>R.pausa_max+1e-4)E(`Turno de ${fmtH(H(r.i,r.o))} sem pausa.`);
+      const hrs=H(r.i,r.o)-(r.a&&r.b?H(r.a,r.b):0)-(r.c&&r.e?H(r.c,r.e):0);
+      if(hrs>R.dia_max)E(`${fmtHrs(hrs)} h num dia (máximo ${R.dia_max} h).`);
+      m.push(['i',`Horas de trabalho: ${fmtHrs(hrs)} h`])}
+    q('#e_m').innerHTML=m.map(([k,s])=>`<div class="${k}">${esc(s)}</div>`).join('');
+    const sb_=q('#e_s');if(sb_)sb_.disabled=hard;return {r,hard}}
+  d.querySelectorAll('input,select').forEach(el=>el.oninput=check);check();
+  q('#e_c0').onclick=()=>d.close();
+  if(q('#e_s'))q('#e_s').onclick=async()=>{const {r,hard}=check();if(hard)return;d.close();
+    await rpcSave({p_turno:t?t.id:null,p_func:q('#e_f').value,p_inicio:r.i,p_fim:r.o,p_pausa_ini:r.a,p_pausa_fim:r.b,p_pausa2_ini:r.c,p_pausa2_fim:r.e,p_modelo:t?t.modelo:null,p_versao:t?t.versao:null,p_codigo:q('#e_c').value||null})};
+  if(q('#e_x'))q('#e_x').onclick=async()=>{d.close();
+    const base={p_turno:t.id,p_versao:t.versao,p_tipo_aviso:null,p_motivo:null};
+    let av=null;if(S.sem.estado==='publicado'){av=await askAviso();if(!av)return}
+    const r=await sb.rpc('gh_remover_turno',av?{...base,p_tipo_aviso:av.tipo,p_motivo:av.motivo}:base);
+    if(r.error)toast(r.error.message,true);else toast('Turno removido');await loadSemana()};
+  d.showModal()}
+
+/* ---------- cabeçalho ---------- */
+$('#wsel').onchange=e=>{S.sem=S.semanas.find(w=>w.id===e.target.value);loadSemana()};
+const step=n=>{const i=S.semanas.findIndex(w=>w.id===S.sem?.id)+n;if(S.semanas[i]){S.sem=S.semanas[i];loadSemana()}};
+$('#wprev').onclick=()=>step(-1);$('#wnext').onclick=()=>step(1);
+$('#breload').onclick=async()=>{await loadSemanas();await loadSemana()};
+document.querySelectorAll('.tab').forEach(b=>b.onclick=()=>{S.tab=b.dataset.t;render()});
+$('#main').addEventListener('click',e=>{const c=e.target.closest('[data-go]');if(c){S.dia=+c.dataset.go;S.tab='dia';render()}});
+$('#bnew').onclick=async()=>{const last=S.semanas[S.semanas.length-1];const n=last?addDays(last.inicio,7):new Date().toISOString().slice(0,10);
+  const r=await sb.rpc('gh_criar_semana',{p_inicio:n});if(r.error)return toast(r.error.message,true);await loadSemanas();S.sem=S.semanas.find(w=>w.inicio===n);await loadSemana();toast('Semana criada')};
+$('#bcopy').onclick=async()=>{const n=addDays(S.sem.inicio,7);if(S.semanas.some(w=>w.inicio===n))return toast('A semana seguinte já existe.',true);
+  const r=await sb.rpc('gh_copiar_semana',{p_origem:S.sem.id,p_inicio_destino:n});if(r.error)return toast(r.error.message,true);await loadSemanas();S.sem=S.semanas.find(w=>w.inicio===n);await loadSemana();toast('Semana copiada')};
+async function fechar(est){const n=nErros();if(n){toast(`Há ${n} erro(s) por resolver — não é possível ${est==='publicado'?'publicar':'enviar para validação'}.`,true);return}
+  const r=await sb.rpc('gh_fechar_semana',{p_semana:S.sem.id,p_estado:est});if(r.error)return toast(r.error.message,true);await loadSemanas();await loadSemana();toast(est==='publicado'?'Semana publicada':'Enviada para validação')}
+$('#bvalid').onclick=()=>fechar('em_validacao');$('#bpub').onclick=()=>fechar('publicado');
+boot().catch(e=>{$('#main').innerHTML='<div class="empty">Erro ao carregar: '+esc(e.message||e)+'</div>'});
+})();
+</script>
+</body>
+</html>
