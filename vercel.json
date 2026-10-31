@@ -1,1 +1,1 @@
-{"buildCommand":"sh build.sh","outputDirectory":"public","installCommand":"echo ok","framework":null}
+{"framework":null,"headers":[{"source":"/(.*)","headers":[{"key":"X-Robots-Tag","value":"noindex, nofollow"},{"key":"X-Frame-Options","value":"SAMEORIGIN"},{"key":"Referrer-Policy","value":"same-origin"}]}]}

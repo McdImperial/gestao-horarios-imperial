@@ -3,6 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
+<meta name="robots" content="noindex,nofollow">
 <title>Gestão de Horários — McDonald's Imperial</title>
 <style>
 :root{--red:#da291c;--yel:#ffc72c;--ink:#1f1d1a;--mut:#6b665f;--line:#e4e0d8;--bg:#f6f4ef;--card:#fff;--ok:#2e7d32;--warn:#b26a00;--err:#c62828;--bar:#274b7a}
@@ -91,6 +92,7 @@ dialog::backdrop{background:#0005}
   <button class="btn" id="bnew">Nova semana</button>
   <button class="btn" id="bcopy">Copiar para a seguinte</button>
   <button class="btn" id="breload" title="Atualizar">↻</button>
+  <button class="btn" id="blogout" hidden title="Terminar sessão">Sair</button>
   <button class="btn pri" id="bvalid">Enviar para validação</button>
   <button class="btn ok" id="bpub">Publicar</button>
 </header>
@@ -113,7 +115,7 @@ dialog::backdrop{background:#0005}
 (function(){
 "use strict";
 const URL_='https://tmcigrzsztbsavsiauoy.supabase.co',KEY='sb_publishable_qhsUxvCTk7y7gpsmGwMahg_vovj7x7l';
-const sb=supabase.createClient(URL_,KEY,{auth:{persistSession:true,autoRefreshToken:true,storageKey:'mcdimp-auth',detectSessionInUrl:false}});
+const sb=supabase.createClient(URL_,KEY,{auth:{persistSession:true,autoRefreshToken:true,storageKey:'gh-auth',detectSessionInUrl:false}});
 const TZ='Europe/Lisbon',DAYN=['Seg','Ter','Qua','Qui','Sex','Sáb','Dom'],OP=7; // dia operacional começa às 07:00
 const $=s=>document.querySelector(s);
 const esc=s=>String(s==null?'':s).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
@@ -142,7 +144,8 @@ document.addEventListener('scroll',()=>tip(null,null),true);
 /* ---------- dados ---------- */
 async function boot(){
   const {data:{session}}=await sb.auth.getSession();
-  if(!session){$('#main').innerHTML='<div class="empty">Sessão não iniciada.<br><br><a class="btn pri" href="/">Entrar na app</a></div>';return}
+  if(!session){return showLogin()}
+  $('#blogout').hidden=false;
   const {data:p}=await sb.from('perfis').select('papel,estado').eq('id',session.user.id).maybeSingle();
   if(!p||p.estado!=='ativo'){$('#main').innerHTML='<div class="empty">Sem acesso a este módulo.</div>';return}
   S.papel=p.papel;
@@ -162,6 +165,17 @@ async function boot(){
   if(S.sem&&S.sem.inicio<=hoje&&addDays(S.sem.inicio,6)>=hoje)S.dia=Math.max(0,Math.min(6,Math.round((Date.parse(hoje)-Date.parse(S.sem.inicio))/864e5)));
   await loadSemana();
 }
+function showLogin(){
+  document.querySelectorAll('header,.tabs').forEach(e=>e.style.display='none');
+  $('#main').innerHTML=`<form id="lg" style="max-width:340px;margin:12vh auto;background:#fff;border:1px solid var(--line);border-top:4px solid var(--yel);border-radius:12px;padding:22px;display:flex;flex-direction:column;gap:12px">
+  <h1 style="margin:0;font-size:20px">Gestão de <b style="color:var(--red)">Horários</b></h1><div class="muted">McDonald's Imperial · acesso com a tua conta habitual</div>
+  <label class="muted" style="font-size:12px">E-mail<input id="lg_e" type="email" autocomplete="username" required style="width:100%;padding:9px;border:1px solid var(--line);border-radius:8px;margin-top:3px"></label>
+  <label class="muted" style="font-size:12px">Palavra-passe<input id="lg_p" type="password" autocomplete="current-password" required style="width:100%;padding:9px;border:1px solid var(--line);border-radius:8px;margin-top:3px"></label>
+  <div id="lg_x" style="color:var(--err);font-size:13px;min-height:18px" role="alert"></div><button class="btn pri" style="padding:10px">Entrar</button></form>`;
+  $('#lg').onsubmit=async e=>{e.preventDefault();$('#lg_x').textContent='';
+    const r=await sb.auth.signInWithPassword({email:$('#lg_e').value.trim(),password:$('#lg_p').value});
+    if(r.error){$('#lg_x').textContent='E-mail ou palavra-passe incorretos.';return}
+    location.reload()}}
 async function loadSemanas(){const {data}=await sb.from('gh_semanas').select('*').order('inicio');S.semanas=data||[];
   $('#wsel').innerHTML=S.semanas.map(w=>`<option value="${w.id}">S${w.semana_iso} · ${fmtD(w.inicio)}–${fmtD(addDays(w.inicio,6))}</option>`).join('')||'<option>Sem semanas</option>'}
 async function loadSemana(){
@@ -495,6 +509,7 @@ function exportCsv(){
 $('#wsel').onchange=e=>{S.sem=S.semanas.find(w=>w.id===e.target.value);loadSemana()};
 const step=n=>{const i=S.semanas.findIndex(w=>w.id===S.sem?.id)+n;if(S.semanas[i]){S.sem=S.semanas[i];loadSemana()}};
 $('#wprev').onclick=()=>step(-1);$('#wnext').onclick=()=>step(1);
+$('#blogout').onclick=async()=>{await sb.auth.signOut();location.reload()};
 $('#breload').onclick=async()=>{await loadSemanas();await loadSemana()};
 document.querySelectorAll('.tab').forEach(b=>b.onclick=()=>{S.tab=b.dataset.t;render()});
 $('#main').addEventListener('click',e=>{const dg=e.target.closest('[data-go]');if(dg&&S.tab==='dash'){S.dia=+dg.dataset.go;S.tab='dia';return render()}if(e.target.id==='bcsv')return exportCsv();if(e.target.id==='bprint')return window.print();const c=e.target.closest('[data-go]');if(c){S.dia=+c.dataset.go;S.tab='dia';render()}});
