@@ -76,6 +76,12 @@ dialog::backdrop{background:#0005}
 .empty{padding:40px;text-align:center;color:var(--mut)}
 .legend{display:flex;gap:12px;font-size:12px;color:var(--mut);margin:8px 2px;flex-wrap:wrap;align-items:center}
 .legend i{display:inline-block;width:14px;height:10px;border-radius:2px;vertical-align:middle;margin-right:4px}
+.card.scr{max-height:calc(100vh - 235px);min-height:320px}
+tfoot td{position:sticky;z-index:6;height:28px;background:#fff;border-top:1px solid var(--line)}
+tfoot td.sl{left:0;z-index:8;padding:0 8px;white-space:nowrap}
+tfoot .covrow span{height:28px;line-height:28px;padding:0;font-size:11px;border-right:1px solid #fff8}
+tfoot .covrow span.w2{flex:0 0 40px;font-size:10.5px;cursor:pointer}
+.covrow{min-width:960px}
 @media(max-width:700px){.dsp{display:none}}
 </style>
 </head>
@@ -111,7 +117,7 @@ const sb=supabase.createClient(URL_,KEY,{auth:{persistSession:true,autoRefreshTo
 const TZ='Europe/Lisbon',DAYN=['Seg','Ter','Qua','Qui','Sex','Sáb','Dom'],OP=7; // dia operacional começa às 07:00
 const $=s=>document.querySelector(s);
 const esc=s=>String(s==null?'':s).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
-const S={papel:null,semanas:[],sem:null,tab:'dia',dia:0,func:[],tipos:{},disp:{},turnos:[],aus:[],val:[],rules:{pausa_ok:4.5,pausa_max:5,trecho_min:2,dia_max:10}};
+const S={papel:null,semanas:[],sem:null,tab:'dia',dia:0,func:[],tipos:{},disp:{},turnos:[],aus:[],val:[],rules:{pausa_ok:4.5,pausa_max:5,trecho_min:2,dia_max:10},guia:[],vend:{}};
 const canEdit=()=>['administrador','editor'].includes(S.papel), canPub=()=>S.papel==='administrador';
 
 /* ---------- tempo (Europe/Lisbon) ---------- */
@@ -140,11 +146,13 @@ async function boot(){
   const {data:p}=await sb.from('perfis').select('papel,estado').eq('id',session.user.id).maybeSingle();
   if(!p||p.estado!=='ativo'){$('#main').innerHTML='<div class="empty">Sem acesso a este módulo.</div>';return}
   S.papel=p.papel;
-  const [f,d,t,r]=await Promise.all([
+  const [f,d,t,r,g]=await Promise.all([
     sb.from('gh_funcionarios').select('id,mec,nome,funcao,contrato_horas').eq('ativo',true).order('nome'),
     sb.from('gh_disponibilidades').select('funcionario_id,dia_semana,hora_ini,hora_fim').limit(5000),
     sb.from('gh_tipos_ausencia').select('*').order('ordem'),
-    sb.from('gh_regras').select('chave,valor,vigor_desde').in('chave',['pausa_ok','pausa_max','trecho_min','dia_max']).order('vigor_desde')]);
+    sb.from('gh_regras').select('chave,valor,vigor_desde').in('chave',['pausa_ok','pausa_max','trecho_min','dia_max']).order('vigor_desde'),
+    sb.from('gh_guia_posicionamento').select('vendas_de,pessoas').order('vendas_de')]);
+  S.guia=(g.data||[]).map(x=>({de:+x.vendas_de,n:x.pessoas}));
   if(f.error){$('#main').innerHTML='<div class="empty">Sem permissão para ler os dados.</div>';return}
   S.func=f.data;S.fmap=Object.fromEntries(f.data.map(x=>[x.id,x]));
   (t.data||[]).forEach(x=>S.tipos[x.codigo]=x);
@@ -162,10 +170,12 @@ async function loadSemana(){
   if(!S.sem){render();return}
   S.sem=S.semanas.find(w=>w.id===S.sem.id)||S.sem;$('#wsel').value=S.sem.id;
   const i=S.sem.inicio,fim=addDays(i,6);
-  const [t,a,v]=await Promise.all([
+  const [t,a,v,vh]=await Promise.all([
     sb.from('gh_turnos').select('*').eq('semana_id',S.sem.id).order('inicio'),
     sb.from('gh_ausencias').select('funcionario_id,tipo,de,ate').eq('estado','aprovada').lte('de',fim).gte('ate',i),
-    sb.rpc('gh_validar_semana',{p_semana:S.sem.id})]);
+    sb.rpc('gh_validar_semana',{p_semana:S.sem.id}),
+    sb.from('gh_vendas_horarias').select('dia,hora,valor').gte('dia',i).lte('dia',fim)]);
+  S.vend={};(vh.data||[]).forEach(x=>S.vend[x.dia+'|'+x.hora]=+x.valor);
   S.turnos=t.data||[];S.aus=a.data||[];S.val=v.data||[];render()}
 
 /* ---------- cálculos ---------- */
@@ -217,7 +227,7 @@ function rDia(){
   const list=[...ids].map(id=>S.fmap[id]).filter(Boolean);
   const first=f=>{const ts=S.turnos.filter(t=>t.dia===dia&&t.funcionario_id===f.id);return ts.length?Date.parse(ts[0].inicio):9e15};
   list.sort((a,b)=>first(a)-first(b)||a.nome.localeCompare(b.nome));
-  const cov=new Array(48).fill(0);
+  const cov=new Array(48).fill(0),npc=new Array(48).fill(0);
   const rows=list.map(f=>{
     const ts=S.turnos.filter(t=>t.dia===dia&&t.funcionario_id===f.id),a=ausDe(f.id,dia),vs=valDe(f.id,dia),w=worst(vs);
     const dp=S.disp[f.id]&&S.disp[f.id][k];const dtxt=dp?fmtAv(dp.hora_ini)+'–'+fmtAv(dp.hora_fim):'sem disp.';
@@ -225,24 +235,36 @@ function rDia(){
     ts.forEach(t=>{
       const s=(Date.parse(t.inicio)-ax0)/36e5*PX,e=(Date.parse(t.fim)-ax0)/36e5*PX,wd=Math.max(e-s,8);
       const pz=[[t.pausa_inicio,t.pausa_fim],[t.pausa2_inicio,t.pausa2_fim]].map((x,ix)=>x[0]?`<span class="gp" data-n="${ix+1}" data-tip="Pausa ${hhmm(new Date(x[0]))}–${hhmm(new Date(x[1]))}${canEdit()?'\nClica para remover · arrasta para mover':''}" style="left:${(Date.parse(x[0])-Date.parse(t.inicio))/36e5*PX}px;width:${(Date.parse(x[1])-Date.parse(x[0]))/36e5*PX}px">${canEdit()?'<i class="rz r"></i>':''}</span>`:'').join('');
-      for(let i=0;i<48;i++){const sl=ax0+i*18e5;if(Date.parse(t.inicio)<=sl&&Date.parse(t.fim)>sl){const inP=[[t.pausa_inicio,t.pausa_fim],[t.pausa2_inicio,t.pausa2_fim]].some(x=>x[0]&&Date.parse(x[0])<=sl&&Date.parse(x[1])>sl);if(!inP)cov[i]++}}
+      for(let i=0;i<48;i++){const sl=ax0+i*18e5;if(Date.parse(t.inicio)<=sl&&Date.parse(t.fim)>sl){const inP=[[t.pausa_inicio,t.pausa_fim],[t.pausa2_inicio,t.pausa2_fim]].some(x=>x[0]&&Date.parse(x[0])<=sl&&Date.parse(x[1])>sl);if(!inP){if(t.codigo==='NP')npc[i]++;else cov[i]++}}}
       const c=t.codigo&&S.tipos[t.codigo];
       bars+=`<div class="bar ${w==='erro'?'err':w==='aviso'?'warn':''}" data-t="${t.id}" style="left:${s}px;width:${wd}px;${!w&&c?'background:'+c.cor+';color:'+c.cor_texto:''}">${canEdit()?'<i class="rz l"></i><i class="rz r"></i>':''}${pz}<span class="tx">${hhmm(new Date(t.inicio))}–${hhmm(new Date(t.fim))} · ${fmtHrs(horas(t))}h${t.codigo?' · '+esc(t.codigo):''}</span></div>`});
     if(a){const c=S.tipos[a.tipo]||{};bars+=`<span class="chip" style="background:${c.cor||'#eee'};color:${c.cor_texto||'inherit'}" data-tip="${esc(c.nome||a.tipo)}">${esc(a.tipo)}</span>`}
     const sym=w==='erro'?'<span class="sym e" data-tip="'+esc(vs.map(v=>(v.nivel==='erro'?'✕ ':'! ')+v.mensagem).join('\n'))+'">✕</span>':w?'<span class="sym w" data-tip="'+esc(vs.map(v=>'! '+v.mensagem).join('\n'))+'">!</span>':ts.length?'<span class="sym o">✓</span>':'';
     return `<tr data-f="${f.id}"><td class="nm" title="${esc(f.nome)}">${canEdit()&&ts.length?`<button class="ed" data-ed="${ts[0].id}" title="Editar horas">✎</button>`:''}${esc(f.nome)}</td><td class="dsp">${dtxt}</td><td class="alr">${sym}</td><td><div class="tl" data-f="${f.id}">${hours}${bars}</div></td></tr>`}).join('');
-  const covr=cov.map((n,i)=>`<span class="${n<(S.rules.cobertura_min||2)?'c0':n<(S.rules.cobertura_min||2)+2?'c1':'c2'}" data-tip="${p2((OP+Math.floor(i/2))%24)}:${i%2?'30':'00'} · ${n} pessoa(s)">${n}</span>`).join('');
+  const vend=h=>S.vend[dia+'|'+h]||0,need=v=>{let n=0;S.guia.forEach(g=>{if(v>=g.de)n=g.n});return n};
+  const hr=i=>(OP+Math.floor(i/2))%24;
+  const sc=(v,max)=>{const p=Math.max(0,Math.min(1,v/max));return `hsl(${50+p*75},55%,${88-p*22}%)`};
+  const dcol=d=>d<=-3?'#e57373':d===-2?'#ef9a7a':d===-1?'#f6c28b':d===0?'#fbe98a':d<=2?'#d8d9a0':d===3?'#8fa7bf':'#6f93c9';
+  const maxS=Math.max(10,...cov);
+  const rowF=cov.map((n,i)=>`<span style="background:${sc(n,maxS)}" data-tip="${p2(hr(i))}:${i%2?'30':'00'} · ${n} pessoa(s) a trabalhar">${n}</span>`).join('');
+  const rowD=cov.map((n,i)=>{const nd=need(vend(hr(i))),df=n-nd;return `<span style="background:${vend(hr(i))?dcol(df):'#eee'}" data-tip="${p2(hr(i))}:${i%2?'30':'00'} · em loja ${n} · necessárias ${nd} (guia para ${fmtHrs(vend(hr(i)))} €)">${vend(hr(i))?df:''}</span>`}).join('');
+  const maxV=Math.max(1000,...[...Array(24)].map((_,j)=>vend((OP+j)%24)));
+  const rowV=[...Array(24)].map((_,j)=>{const h=(OP+j)%24,v=vend(h);return `<span class="w2" ${canEdit()?'data-vend="1"':''} style="background:${v?sc(v,maxV):'#7fc17f'}" data-tip="${p2(h)}:00 · vendas previstas${canEdit()?'\nClica para editar o dia':''}">${v?fmtHrs(v)+' €':''}</span>`}).join('');
+  const rowN=npc.map((n,i)=>`<span style="background:#dfe8c2" data-tip="Horas não produtivas (NP)">${n}</span>`).join('');
+  const rowG=cov.map(()=>`<span style="background:#dfe8c2" data-tip="Gerentes produtivos: por ligar à equipa de gestão">–</span>`).join('');
+  const sumr=(lbl,html,k)=>`<tr class="sum"><td class="nm sl" colspan="3" style="bottom:${(4-k)*28}px"><b>${lbl}</b></td><td style="bottom:${(4-k)*28}px"><div class="covrow">${html}</div></td></tr>`;
   return `<div class="days">${days}</div>
   <div class="legend"><span><i style="background:var(--bar)"></i>Turno</span><span><i style="background:repeating-linear-gradient(45deg,#fff,#fff 3px,#ddd 3px,#ddd 6px)"></i>Pausa (até 2)</span><span><i style="background:var(--err)"></i>Erro</span><span><i style="background:#c98a00"></i>Alerta</span>${canEdit()?'<span>Clica na barra para marcar pausa (até 2) · clica na pausa para a remover · arrasta barra, pontas ou pausa (30 min) · ✎ edita as horas</span>':'<span>Só leitura</span>'}
   <span class="sp"></span>${canEdit()?'<button class="btn" id="badd">+ Turno</button>':''}</div>
-  <div class="card"><table class="g"><thead><tr><th class="nm">Funcionário</th><th class="dsp">Disponib.</th><th class="alr">⚠</th><th><div class="tl" style="height:22px;background:none">${head}</div></th></tr></thead><tbody>${rows||'<tr><td colspan="4" class="empty">Sem turnos neste dia.</td></tr>'}
-  <tr class="cov"><td class="nm"><b>Pessoas em loja</b></td><td></td><td></td><td><div class="covrow">${covr}</div></td></tr></tbody></table></div>`;
+  <div class="card scr"><table class="g"><thead><tr><th class="nm">Funcionário</th><th class="dsp">Disponib.</th><th class="alr">⚠</th><th><div class="tl" style="height:22px;background:none">${head}</div></th></tr></thead><tbody>${rows||'<tr><td colspan="4" class="empty">Sem turnos neste dia.</td></tr>'}
+</tbody><tfoot>${sumr('Funcionários',rowF,0)}${sumr('Diferença posicionamento',rowD,1)}${sumr('Vendas horárias',rowV,2)}${sumr('Horas não produtivas',rowN,3)}${sumr('Gerentes produtivos',rowG,4)}</tfoot></table></div>`;
 }
 
 /* ---------- interação do planeamento ---------- */
 function bindDia(){
   document.querySelectorAll('.day').forEach(b=>b.onclick=()=>{S.dia=+b.dataset.d;render()});
   const add=$('#badd');if(add)add.onclick=()=>openEd(null);
+  document.querySelectorAll('[data-vend]').forEach(b=>b.onclick=openVend);
   document.querySelectorAll('[data-ed]').forEach(b=>b.onclick=()=>openEd(S.turnos.find(x=>x.id===b.dataset.ed)));
   const AX0=()=>lisbon(diaDe(S.dia),OP,0).getTime(),HALF=18e5,snap=ms=>Math.round(ms/HALF)*HALF;
   document.querySelectorAll('.bar').forEach(el=>{
@@ -280,6 +302,17 @@ async function savePausas(t,pz){
   return rpcSave({p_turno:t.id,p_func:t.funcionario_id,p_inicio:new Date(t.inicio),p_fim:new Date(t.fim),
     p_pausa_ini:D(pz[0]&&pz[0][0]),p_pausa_fim:D(pz[0]&&pz[0][1]),p_pausa2_ini:D(pz[1]&&pz[1][0]),p_pausa2_fim:D(pz[1]&&pz[1][1]),
     p_modelo:t.modelo,p_versao:t.versao,p_codigo:t.codigo})}
+
+/* ---------- vendas horárias ---------- */
+function openVend(){
+  const dia=diaDe(S.dia),d=$('#dlg');
+  d.innerHTML=`<div class="dh">Vendas horárias previstas · ${DAYN[S.dia]} ${fmtD(dia)}</div><div class="db" style="grid-template-columns:repeat(4,1fr)">${[...Array(24)].map((_,j)=>{const h=(OP+j)%24;return `<label>${p2(h)}:00<input type="number" min="0" step="10" data-h="${h}" value="${S.vend[dia+'|'+h]||0}"></label>`}).join('')}</div>
+  <div class="df"><button class="btn" id="v_c">Cancelar</button><button class="btn pri" id="v_s">Guardar</button></div>`;
+  $('#v_c').onclick=()=>d.close();
+  $('#v_s').onclick=async()=>{const rows=[...d.querySelectorAll('input[data-h]')].map(i=>({dia,hora:+i.dataset.h,valor:Math.max(0,+i.value||0)}));
+    const r=await sb.from('gh_vendas_horarias').upsert(rows,{onConflict:'dia,hora'});d.close();
+    if(r.error)toast(r.error.message,true);else toast('Vendas guardadas');await loadSemana()};
+  d.showModal()}
 
 /* ---------- gravar ---------- */
 async function saveTurno(t,ch,shift){
