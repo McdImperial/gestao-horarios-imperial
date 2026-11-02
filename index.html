@@ -116,6 +116,10 @@ dialog::backdrop{background:#0005}
 .empty{padding:40px;text-align:center;color:var(--mut)}
 .legend{display:flex;gap:12px;font-size:12px;color:var(--mut);margin:8px 2px;flex-wrap:wrap;align-items:center}
 .legend i{display:inline-block;width:14px;height:10px;border-radius:2px;vertical-align:middle;margin-right:4px}
+table.alt tbody.dif>tr:first-child td.nm{background:#fffdf3}
+.mtc{text-align:center;line-height:1.25}.mtc.off{color:var(--mut);font-weight:700}.mtc.chg{background:#fff3c4;box-shadow:inset 0 0 0 1px #e6cf7a}
+.mtc small{font-size:10px}table.alt tr.rg td{background:#faf8f3;border-bottom:2px solid var(--line)}table.alt tr.rg td.mtc{color:var(--mut);font-size:11px}
+.fer{text-align:center;min-width:34px}.fer.ed{cursor:pointer}.fer.ed:hover{background:#fff3c4}.fer.neg{color:var(--err);font-weight:700}
 @media print{header,.tabs,.legend,.days,#tip,#toast{display:none!important}body{background:#fff}main{padding:0}.card{border:0;overflow:visible}@page{size:A4 landscape;margin:10mm}.wk td,.wk th{font-size:10px;padding:2px 4px}}
 @media(max-width:700px){.dsp{display:none}}
 </style>
@@ -141,6 +145,9 @@ dialog::backdrop{background:#0005}
   <button class="tab" role="tab" data-t="func">Funcionários</button>
   <button class="tab" role="tab" data-t="disp">Disponibilidades e ausências</button>
   <button class="tab" role="tab" data-t="mapa">Mapa de folgas</button>
+  <button class="tab" role="tab" data-t="alt">Alterações</button>
+  <button class="tab" role="tab" data-t="mt">Mapa MT</button>
+  <button class="tab" role="tab" data-t="ts">Trabalho suplementar</button>
   <button class="tab" role="tab" data-t="hist">Histórico</button>
   <button class="tab" role="tab" data-t="cfg">Configurações</button>
 </div>
@@ -252,6 +259,9 @@ function render(){
   if(S.tab==='stf'){m.innerHTML='<div class="empty">A carregar…</div>';return rStaff()}
   if(S.tab==='hist'){m.innerHTML='<div class="empty">A carregar…</div>';return rHist()}
   if(!w)return m.innerHTML='<div class="empty">Ainda não há semanas. '+(canEdit()?'Cria a primeira em «Nova semana».':'')+'</div>';
+  if(S.tab==='mt'){m.innerHTML=rMT();const b=$('#bmtpdf');if(b)b.onclick=mtPDF;return}
+  if(S.tab==='alt'){m.innerHTML='<div class="empty">A carregar…</div>';return rAlt()}
+  if(S.tab==='ts'){m.innerHTML='<div class="empty">A carregar…</div>';return rTS()}
   if(S.tab==='sem')m.innerHTML=rSem();else{m.innerHTML=rDia();bindDia()}
 }
 function rFunc(){return `<div class="card"><table class="wk" style="width:100%"><thead><tr><th>Mec.</th><th>Nome</th><th>Função</th><th>Contrato (h/sem)</th></tr></thead><tbody>${S.func.map(f=>`<tr><td>${f.mec}</td><td>${esc(f.nome)}</td><td>${esc(f.funcao||'')}</td><td>${f.contrato_horas}</td></tr>`).join('')}</tbody></table></div>`}
@@ -556,16 +566,18 @@ async function rMapa(){
   const m=$('#main');
   if(!S.mf)S.mf={mes:(S.sem?S.sem.inicio:new Date().toISOString().slice(0,10)).slice(0,7),pincel:'OFF',q:''};
   const mes=S.mf.mes,[y,mo]=mes.split('-').map(Number),nd=new Date(Date.UTC(y,mo,0)).getUTCDate(),ini=mes+'-01',fim=mes+'-'+p2(nd);
-  let aus,tur,res;
-  try{[aus,tur,res]=await Promise.all([
+  let aus,tur,res,fer;
+  try{[aus,tur,res,fer]=await Promise.all([
     fetchAll(()=>sb.from('gh_ausencias').select('id,funcionario_id,tipo,de,ate').eq('estado','aprovada').lte('de',fim).gte('ate',ini).order('de').order('id')),
     fetchAll(()=>sb.from('gh_turnos').select('id,funcionario_id,dia').gte('dia',ini).lte('dia',fim).order('dia').order('id')),
-    sb.rpc('gh_resumo_ausencias',{p_ano:y})])}catch(e){m.innerHTML='<div class="empty">Erro ao carregar: '+esc(e.message||e)+'</div>';return}
+    sb.rpc('gh_resumo_ausencias',{p_ano:y}),
+    sb.from('gh_funcionarios').select('id,fer_direito,fer_adicional,fer_ano_anterior').eq('ativo',true)])}catch(e){m.innerHTML='<div class="empty">Erro ao carregar: '+esc(e.message||e)+'</div>';return}
   if(S.tab!=='mapa'||S.mf.mes!==mes)return;
   const cell={};aus.forEach(a=>{const c=cell[a.funcionario_id]=cell[a.funcionario_id]||{};
     for(let d=Math.max(1,a.de<ini?1:+a.de.slice(8));d<=Math.min(nd,a.ate>fim?nd:+a.ate.slice(8));d++)c[d]=a.tipo});
   const tset=new Set(tur.map(t=>t.funcionario_id+'|'+(+t.dia.slice(8))));
-  const yr={};(res.data||[]).forEach(r=>{const o=yr[r.funcionario_id]=yr[r.funcionario_id]||{f:0};if(GRUPO[r.tipo]==='ferias')o.f+=r.dias});
+  const yr={};(res.data||[]).forEach(r=>{const o=yr[r.funcionario_id]=yr[r.funcionario_id]||{f:0};if(r.tipo==='F')o.f+=r.dias});
+  S.fer=Object.fromEntries(((fer&&fer.data)||[]).map(x=>[x.id,x]));
   const ws=S.sem?S.sem.inicio:null,hoje=new Date().toISOString().slice(0,10);
   const dias=[...Array(nd)].map((_,i)=>{const d=i+1,ds=mes+'-'+p2(d),wd=(new Date(ds+'T00:00:00Z').getUTCDay()+6)%7;return {d,ds,wd,we:wd>=5,ws:ws&&ds>=ws&&ds<=addDays(ws,6),hoje:ds===hoje}});
   const head=dias.map(x=>`<th data-day="${x.ds}" class="${x.we?'we':''} ${x.ws?'ws':''} ${x.hoje?'hoje':''}" title="Abrir ${x.ds.split('-').reverse().join('/')} no planeamento diário"><b>${x.d}</b><span style="font-size:9.5px">${DAYN[x.wd]}</span></th>`).join('');
@@ -578,20 +590,28 @@ async function rMapa(){
       if(t){cnt[i][GRUPO[t]||'baixa']++}if(tr)cnt[i].turno++;
       const k=t?corT(t):null;
       return `<td class="d ${x.we&&!t?'we':''} ${tr?'tr':''} ${t&&tr?'cf':''}" data-f="${f.id}" data-d="${x.d}" ${t?`style="background:${k.bg};color:${k.fg}"`:''} ${tr?`data-tip="${t?'Tem turno planeado e '+esc((S.tipos[t]||{}).nome||t)+' neste dia':'Tem turno planeado'}"`:t?`data-tip="${esc((S.tipos[t]||{}).nome||t)}"`:''}>${t?esc(t==='OFF'?'OFF':t):''}</td>`}).join('');
-    return `<tr data-n="${esc(f.nome.toLowerCase())}" ${q&&!f.nome.toLowerCase().includes(q)?'hidden':''}><td class="nm" title="${esc(f.nome)}">${esc(f.nome)}</td><td class="yr" data-tip="Dias de férias marcados em ${y}">${(yr[f.id]||{f:0}).f||''}</td>${tds}</tr>`}).join('');
+    return `<tr data-n="${esc(f.nome.toLowerCase())}" ${q&&!f.nome.toLowerCase().includes(q)?'hidden':''}><td class="nm" title="${esc(f.nome)}">${esc(f.nome)}</td>${ferCells(f.id,(yr[f.id]||{f:0}).f)}${tds}</tr>`}).join('');
   const N=S.func.length;
-  const linha=(nome,fn,i)=>`<tr><th class="nm" style="bottom:${(4-i)*27}px">${nome}</th><td class="yr" style="bottom:${(4-i)*27}px"></td>${cnt.map((c,j)=>`<td style="bottom:${(4-i)*27}px" class="${dias[j].we?'we':''}">${fn(c)}</td>`).join('')}</tr>`;
+  const linha=(nome,fn,i)=>`<tr><th class="nm" style="bottom:${(4-i)*27}px">${nome}</th><td class="yr" colspan="3" style="bottom:${(4-i)*27}px"></td>${cnt.map((c,j)=>`<td style="bottom:${(4-i)*27}px" class="${dias[j].we?'we':''}">${fn(c)}</td>`).join('')}</tr>`;
   const foot=linha('A trabalhar',c=>N-c.folga-c.ferias-c.baixa,0)+linha('Folgas',c=>c.folga||'',1)+linha('Férias',c=>c.ferias||'',2)+linha('Baixa / licença / seguro',c=>c.baixa||'',3)+linha('Com turno planeado',c=>c.turno||'',4);
   const pal=canEdit()?`<div class="pal"><b>Marcar:</b>${tipos.map(t=>{const k=corT(t.codigo);return `<button data-p="${esc(t.codigo)}" aria-pressed="${S.mf.pincel===t.codigo}" style="background:${k.bg};color:${k.fg}" title="${esc(t.nome)}">${esc(t.codigo)}</button>`}).join('')}<button data-p="-" aria-pressed="${S.mf.pincel==='-'}" style="background:#fff;border-color:var(--line)" title="Apagar a marcação">Apagar</button><span class="muted" style="font-size:12px">Escolhe o código, depois clica num dia ou arrasta ao longo da linha do funcionário.</span></div>`:'';
   m.innerHTML=`<div class="legend" style="margin-top:0"><button class="btn" id="mfp" aria-label="Mês anterior">‹</button><input type="month" id="mfm" class="btn" value="${mes}"><button class="btn" id="mfn" aria-label="Mês seguinte">›</button>
     <input id="mfq" class="btn" placeholder="Procurar funcionário" value="${esc(S.mf.q||'')}" style="min-width:180px"><span class="sp"></span>
     <span><i style="background:#fff3c4;border:1px solid #e6cf7a"></i>semana aberta no planeamento</span><span><i style="background:var(--bar);border-radius:50%;width:8px;height:8px"></i>tem turno planeado</span><span><i style="outline:2px solid var(--err);outline-offset:-2px;background:#fff"></i>turno em dia de ausência</span></div>
     ${pal}
-    <div class="card mfbox"><table class="mf"><thead><tr><th class="nm">Funcionário</th><th class="yr" title="Férias marcadas no ano">Férias ${y}</th>${head}</tr></thead><tbody>${rows}</tbody><tfoot>${foot}</tfoot></table></div>
-    <p class="muted" style="font-size:12px">Clica no número do dia para abrir esse dia no planeamento diário. As folgas, férias e baixas marcadas aqui são as que o planeamento usa para avisar de turnos em dias de ausência. Dados iniciais importados do Mapa Folgas do Excel.</p>`;
+    <div class="card mfbox"><table class="mf"><thead><tr><th class="nm">Funcionário</th><th class="yr" title="Direito a férias (dias úteis, incl. adicionais e ano anterior)">Dir.</th><th class="yr" title="Férias gozadas em ${y} (código F)">Goz.</th><th class="yr" title="Dias de férias por gozar">Resta</th>${head}</tr></thead><tbody>${rows}</tbody><tfoot>${foot}</tfoot></table></div>
+    <p class="muted" style="font-size:12px">Clica no número do dia para abrir esse dia no planeamento diário. As folgas, férias e baixas marcadas aqui são as que o planeamento usa para avisar de turnos em dias de ausência. Dados iniciais importados do Mapa Folgas do Excel. «Dir.» = direito + adicionais + ano anterior; «Goz.» conta só o código F (FX não conta); «Resta» = Dir. − Goz.</p>`;
   bindMapa(y,mes);
 }
+function ferCells(fid,goz){const x=(S.fer||{})[fid]||{},dir=x.fer_direito==null?null:(x.fer_direito||0)+(x.fer_adicional||0)+(x.fer_ano_anterior||0),rest=dir==null?null:dir-goz;
+  const ed=canEdit();
+  return `<td class="yr fer ${ed?'ed':''}" ${ed?`data-fer="${fid}"`:''} data-tip="${dir==null?'Direito não definido':`Direito ${x.fer_direito} + adicionais ${x.fer_adicional||0} + ano anterior ${x.fer_ano_anterior||0}`}${ed?' · clica para editar':''}">${dir==null?'—':dir}</td><td class="yr fer" data-tip="Férias gozadas (F)">${goz||''}</td><td class="yr fer ${rest!=null&&rest<0?'neg':''}">${rest==null?'':rest}</td>`}
 function bindMapa(y,mes){
+  document.querySelectorAll('.mf td[data-fer]').forEach(td=>td.onclick=async()=>{const fid=td.dataset.fer,x=(S.fer||{})[fid]||{},f=S.fmap[fid];
+    const v=prompt(`Férias de ${f.nome}\nDireito, adicionais, ano anterior (dias, separados por vírgula):`,[x.fer_direito??'',x.fer_adicional??0,x.fer_ano_anterior??0].join(','));
+    if(v==null)return;const [a,b,c]=v.split(',').map(t=>t.trim());const n=t=>t===''||t==null?0:Math.round(+t.replace(',','.'));
+    if([a,b,c].some(t=>t!==''&&t!=null&&isNaN(+String(t).replace(',','.'))))return toast('Valores inválidos.',true);
+    const r=await sb.rpc('gh_set_ferias',{p_func:fid,p_dir:a===''?null:n(a),p_adic:n(b),p_ant:n(c)});if(r.error)return toast(r.error.message,true);toast('Férias atualizadas');rMapa()});
   const mv=n=>{const [yy,mm]=S.mf.mes.split('-').map(Number),d=new Date(Date.UTC(yy,mm-1+n,1));S.mf.mes=d.toISOString().slice(0,7);rMapa()};
   $('#mfp').onclick=()=>mv(-1);$('#mfn').onclick=()=>mv(1);
   $('#mfm').onchange=e=>{if(e.target.value){S.mf.mes=e.target.value;rMapa()}};
@@ -612,6 +632,178 @@ function bindMapa(y,mes){
     await loadSemana()};
   tb.addEventListener('mousedown',()=>document.addEventListener('mouseup',up,{once:true}),true);
 }
+
+/* ---------- Mapa MT · Alterações (T/T+/D) · Trabalho suplementar · PDFs ---------- */
+const EMPRESA='Jomaz Gestão Hoteleira Lda  -  Contribuinte Nº 503500461  -  Morada: Praça Liberdade 126  -  Actividade: Restauração  -  Abertura Público 08:00  -  Encerramento Público Dom a Qui 05:00, Sex Sáb e Véspera Feriado 06:00';
+const MESES=['janeiro','fevereiro','março','abril','maio','junho','julho','agosto','setembro','outubro','novembro','dezembro'],DIAL=['Segunda-feira','Terça-feira','Quarta-feira','Quinta-feira','Sexta-feira','Sábado','Domingo'];
+const fmtPT=s=>{if(!s)return '__/__/____';const [y,m,d]=s.split('-');return d+'/'+m+'/'+y};
+const dayLong=s=>{const [y,m,d]=s.split('-').map(Number);return d+' de '+MESES[m-1]+' de '+y};
+const hs=d=>hhmm(d).replace(/^0/,'');
+const isT=h=>/\d/.test(h||'');
+const n1=v=>(+v||0).toLocaleString('pt-PT',{maximumFractionDigits:1});
+// Mapa MT (lógica do Excel): 1.º dia livre = DO, seguintes = DC; mais de 2 = TTP; 7 TTP = '-'
+function mapaMT(hor){
+  const U=hor.map(h=>h==='-'?'DO':h),AC=[];
+  for(let i=0;i<7;i++){if(i===0){AC.push(U[0]);continue}
+    const anyDO=AC.slice(0,i).some(v=>v==='DO');AC.push(anyDO?(U[i]==='DO'?'DC':U[i]):U[i])}
+  const rest=AC.filter(v=>v==='DC'||v==='DO').length;
+  let AK=AC.map(v=>rest>2&&(v==='DC'||v==='DO')?'TTP':v);
+  if(AK.filter(v=>v==='TTP').length===7)AK=AK.map(()=> '-');
+  return AK}
+function curRow(fid){ // horário e pausas da semana aberta, no formato do Excel
+  const h=[],p=[],ts=S.turnos.filter(t=>t.funcionario_id===fid);let hrs=0;
+  for(let k=0;k<7;k++){const d=diaDe(k),t=ts.find(x=>x.dia===d);
+    if(t){h.push(hs(new Date(t.inicio))+' - '+hs(new Date(t.fim)));hrs+=horas(t);
+      const ps=[];[['pausa_inicio','pausa_fim'],['pausa2_inicio','pausa2_fim']].forEach(([a,b])=>{if(t[a]&&t[b])ps.push(hs(new Date(t[a]))+' - '+hs(new Date(t[b])))});
+      p.push(ps.length?ps.join('   '):'-')}
+    else{const a=ausDe(fid,d),cat=a&&S.tipos[a.tipo]?S.tipos[a.tipo].categoria:null;h.push(a&&cat==='ausencia'?a.tipo:'-');p.push('-')}}
+  const mt=mapaMT(h);return {h:mt,p:p.map((x,i)=>isT(mt[i])?x:'-'),hrs}}
+const mtList=()=>S.func.filter(f=>S.turnos.some(t=>t.funcionario_id===f.id)||S.aus.some(a=>a.funcionario_id===f.id));
+const cellMT=(h,p)=>isT(h)&&p&&p!=='-'?`${esc(h)}<br><small class="muted">${esc(p)}</small>`:esc(h);
+
+function rMT(){
+  const rows=mtList().map(f=>{const c=curRow(f.id);return `<tr><td>${f.mec}</td><td class="nm">${esc(f.nome)}</td>${c.h.map((h,i)=>`<td class="mtc ${isT(h)?'':'off'}">${cellMT(h,c.p[i])}</td>`).join('')}<td><b>${n1(c.hrs)}</b></td></tr>`}).join('');
+  return `<div class="legend" style="margin-top:0"><b style="color:var(--ink);font-size:14px">Mapa de Horário de Trabalho Nº ${S.sem.semana_iso}</b><span>${DIAL[0]}, ${dayLong(S.sem.inicio)} a ${DIAL[6]}, ${dayLong(addDays(S.sem.inicio,6))}</span><span class="sp"></span><button class="btn pri" id="bmtpdf">Descarregar PDF para afixar</button></div>
+  <div class="card"><table class="wk" style="width:100%"><thead><tr><th>Mec.</th><th>Nome</th>${DAYN.map((d,i)=>`<th>${d} ${fmtD(diaDe(i))}</th>`).join('')}<th>Horas</th></tr></thead><tbody>${rows||'<tr><td colspan="10" class="muted">Sem horários nesta semana.</td></tr>'}</tbody></table></div>
+  <p class="muted" style="font-size:12px">DO = Descanso Obrigatório · DC = Descanso Complementar · TTP = Trabalho a Tempo Parcial. Gerado a partir dos turnos planeados, com as mesmas regras de DO/DC/TTP do Excel.</p>`}
+
+/* PDF */
+let pdfLib=null;
+async function getPDF(){if(window.jspdf&&window.jspdf.jsPDF)return window.jspdf.jsPDF;
+  if(!pdfLib)pdfLib=new Promise((res,rej)=>{const s=document.createElement('script');s.src='https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js';s.onload=()=>res(window.jspdf.jsPDF);s.onerror=()=>{pdfLib=null;rej(new Error('pdf'))};document.head.appendChild(s)});
+  return pdfLib}
+function savePDF(doc,name){const a=document.createElement('a');a.href=URL.createObjectURL(doc.output('blob'));a.download=name;document.body.appendChild(a);a.click();a.remove();setTimeout(()=>URL.revokeObjectURL(a.href),4000)}
+function pdfTable(doc,x,y,cols,rows,opt){opt=opt||{};const lh=opt.lh||6,fs=opt.fs||9,pad=1.5;doc.setFontSize(fs);
+  const drawRow=(cells,yy,bold,h)=>{let xx=x;doc.setFont('helvetica',bold?'bold':'normal');
+    cells.forEach((c,i)=>{const w=cols[i];if(bold){doc.setFillColor(238,240,243);doc.rect(xx,yy,w,h,'F')}doc.rect(xx,yy,w,h);
+      String(c==null?'':c).split('\n').forEach((ln,k)=>{const t=doc.splitTextToSize(ln,w-2*pad)[0]||'';const ctr=opt.center&&i>=(opt.centerFrom||0);doc.text(t,ctr?xx+w/2:xx+pad,yy+4+k*(fs*0.38),{align:ctr?'center':'left'})});xx+=w})};
+  rows.forEach(r=>{const n=Math.max(1,...r.cells.map(c=>String(c==null?'':c).split('\n').length)),h=Math.max(lh,2.5+n*fs*0.38);
+    if(opt.pageBreak&&y+h>opt.pageBreak)y=opt.onBreak();drawRow(r.cells,y,r.bold,h);y+=h});return y}
+const pdfErr=e=>toast('Não foi possível criar o PDF ('+(e&&e.message==='pdf'?'sem ligação à biblioteca de PDF':e&&e.message||e)+').',true);
+async function mtPDF(){try{
+  const J=await getPDF(),doc=new J({unit:'mm',format:'a4',orientation:'landscape'}),w=S.sem;
+  const head=()=>{doc.setFont('helvetica','bold');doc.setFontSize(12);doc.text(`Mapa de Horário de Trabalho Nº ${w.semana_iso}   /   ${DIAL[0]}, ${dayLong(w.inicio)}   a   ${DIAL[6]}, ${dayLong(addDays(w.inicio,6))}`,148.5,12,{align:'center'});
+    doc.setFont('helvetica','normal');doc.setFontSize(7);doc.text(doc.splitTextToSize(EMPRESA,270)[0]||'',148.5,17,{align:'center'});return 21};
+  const y=head(),cols=[12,40].concat(new Array(7).fill(30)).concat([15]);
+  const hdr={bold:true,cells:['MEC','NOME'].concat(DAYN.map((d,i)=>d.toUpperCase()+' '+fmtPT(diaDe(i)).slice(0,5))).concat(['Horas'])},rows=[hdr];
+  mtList().forEach(f=>{const c=curRow(f.id);rows.push({cells:[f.mec,f.nome].concat(c.h.map((h,i)=>isT(h)&&c.p[i]!=='-'?h+'\n'+c.p[i].replace(/   /g,'\n'):h)).concat([n1(c.hrs)])})});
+  const opt={fs:6.5,lh:6.5,center:true,centerFrom:2,pageBreak:196,onBreak:()=>{doc.addPage();const yy=head();pdfTable(doc,8,yy,cols,[hdr],{fs:6.5,lh:6.5,center:true,centerFrom:2});return yy+6.5}};
+  pdfTable(doc,8,y,cols,rows,opt);
+  const n=doc.getNumberOfPages();for(let i=1;i<=n;i++){doc.setPage(i);doc.setFontSize(7);doc.text('DO = Descanso Obrigatório  /  DC = Descanso Complementar  /  TTP = Trabalho a Tempo Parcial',8,204);doc.text(`Página ${i} de ${n}`,289,204,{align:'right'})}
+  savePDF(doc,`Mapa MT semana ${w.semana_iso}.pdf`)}catch(e){pdfErr(e)}}
+async function adendasPDF(list){
+  const J=await getPDF(),doc=new J({unit:'mm',format:'a4'}),ws=S.sem.inicio,we=addDays(ws,6),emp=EMPRESA.slice(0,28).trim();
+  list.forEach((it,idx)=>{if(idx)doc.addPage();const f=it.f,c=it.cur;
+    doc.setFont('helvetica','bold');doc.setFontSize(11);doc.text(emp,20,22);doc.setFontSize(14);doc.text('ADENDA DE ALTERAÇÃO DE HORÁRIO DE TRABALHO',105,42,{align:'center'});
+    doc.setFontSize(11);doc.setFont('helvetica','normal');doc.text('Trabalhador:',20,58);doc.setFont('helvetica','bold');doc.text(f.nome,46,58);doc.setFont('helvetica','normal');doc.text('Nº',160,58);doc.setFont('helvetica','bold');doc.text(String(f.mec),168,58);doc.setFont('helvetica','normal');
+    const par=`Entre a Jomaz - Gestão Hoteleira, Lda., e o Trabalhador acima mencionado, ambos melhor identificados no contrato de trabalho celebrado em ${fmtPT(f.admissao)} de que o presente acto constitui adenda, é acordada a seguinte alteração ao horário de trabalho:`;
+    let y=70;doc.splitTextToSize(par,170).forEach(l=>{doc.text(l,20,y);y+=6});y+=6;
+    if(it.tipo==='D'){doc.text('Que o meu horário seja alterado a partir do dia:',20,y);doc.setFont('helvetica','bold');doc.text(fmtPT(ws),120,y);doc.setFont('helvetica','normal');doc.text('como novo horário.',145,y)}
+    else{doc.text('De forma temporária no(s) próximo(s) dia(s):',20,y);doc.setFont('helvetica','bold');doc.text(fmtPT(ws),112,y);doc.setFont('helvetica','normal');doc.text('até ao dia',137,y);doc.setFont('helvetica','bold');doc.text(fmtPT(it.tipo==='T+'?it.fim:we),158,y);doc.setFont('helvetica','normal')}
+    y+=14;doc.text(`O Trabalhador passará a cumprir o seguinte horário de ${n1(it.horas)} horas semanais`,20,y);y+=6;
+    y=pdfTable(doc,15,y,[24,24,24,24,24,24,24,24],[{bold:true,cells:[''].concat(DAYN)},{cells:['Horário'].concat(c.h)},{cells:['Pausa'].concat(c.p.map((p,d)=>isT(c.h[d])?p.replace(/   /g,'\n'):'-'))}],{fs:8.5,lh:8,center:true,centerFrom:1});
+    y+=6;doc.setFontSize(8.5);doc.splitTextToSize('DC - Descanso Complementar; DO - Descanso Obrigatório; TTP - Trabalho a Tempo Parcial; Horário semanal de um trabalhador a tempo completo: 40 horas semanais.',175).forEach(l=>{doc.text(l,15,y);y+=4.5});
+    doc.setFontSize(11);const dt=fmtPT(addDays(ws,-10));
+    doc.text(dt,20,200);doc.line(80,200,185,200);doc.text('Trabalhador',132,206,{align:'center'});doc.text(dt,20,230);doc.line(80,230,185,230);doc.text('Entidade Patronal',132,236,{align:'center'})});
+  savePDF(doc,`Adendas semana ${S.sem.semana_iso}.pdf`)}
+
+/* Alterações */
+async function rAlt(){
+  const m=$('#main');let reg,al,fx;
+  try{[reg,al,fx]=await Promise.all([fetchAll(()=>sb.from('gh_horario_registado').select('*')),sb.from('gh_alt_semana').select('*').eq('semana_id',S.sem.id),sb.from('gh_funcionarios').select('id,admissao')]);if(al.error)throw al.error}
+  catch(e){m.innerHTML='<div class="empty">Erro ao carregar: '+esc(e.message||e)+'</div>';return}
+  if(S.tab!=='alt')return;
+  S.alt={reg:Object.fromEntries(reg.map(r=>[r.funcionario_id,r])),cls:Object.fromEntries((al.data||[]).map(r=>[r.funcionario_id,r])),adm:Object.fromEntries((fx.data||[]).map(r=>[r.id,r.admissao]))};
+  drawAlt()}
+function altDiff(fid){const r=S.alt.reg[fid],c=curRow(fid);if(!r)return null;
+  return c.h.map((h,i)=>{const rp=isT(r.h[i])?r.p[i]:'-';return h!==r.h[i]||c.p[i]!==rp})}
+function drawAlt(){
+  const m=$('#main'),ed=canEdit(),lst=mtList(),ws=S.sem.inicio;
+  const rows=lst.map(f=>{const c=curRow(f.id),r=S.alt.reg[f.id],df=altDiff(f.id),k=S.alt.cls[f.id],nd=df?df.filter(Boolean).length:0;
+    const cell=(h,p,d)=>`<td class="mtc ${isT(h)?'':'off'} ${d?'chg':''}">${cellMT(h,p)}</td>`;
+    const regT=r?`<tr class="rg"><td></td><td class="muted" style="font-size:11px">registado</td>${r.h.map((h,i)=>cell(h,isT(h)?r.p[i]:'-',false)).join('')}<td></td><td></td></tr>`:`<tr class="rg"><td></td><td class="muted" style="font-size:11px">registado</td><td colspan="7" class="muted">Sem horário registado${ed?` · <a href="#" data-regis="${f.id}">registar o atual como base</a>`:''}</td><td></td><td></td></tr>`;
+    const sel=ed?`<select data-cls="${f.id}"><option value="">—</option>${['T','T+','D'].map(t=>`<option ${k&&k.tipo===t?'selected':''}>${t}</option>`).join('')}</select> ${k&&k.tipo==='T+'?`<input type="date" data-fim="${f.id}" value="${k.fim||''}" min="${addDays(ws,6)}" title="Data até à qual o horário temporário vigora">`:''}`:(k?`<b>${k.tipo}</b>${k.fim?' até '+fmtPT(k.fim):''}`:'');
+    return `<tbody class="${nd?'dif':''}"><tr><td>${f.mec}</td><td class="nm"><b>${esc(f.nome)}</b></td>${c.h.map((h,i)=>cell(h,c.p[i],df&&df[i])).join('')}<td>${n1(c.hrs)}</td><td>${sel}${k&&k.aplicada?' <span class="badge publicado">aplicada</span>':''}</td></tr>${regT}</tbody>`}).join('');
+  const sem=lst.filter(f=>!S.alt.reg[f.id]).length,porCls=lst.filter(f=>{const d=altDiff(f.id);return d&&d.some(Boolean)&&!S.alt.cls[f.id]}).length;
+  const repor=Object.values(S.alt.reg).filter(r=>r.backup&&r.fim&&r.fim<ws&&S.fmap[r.funcionario_id]);
+  m.innerHTML=`<div class="legend" style="margin-top:0"><b style="color:var(--ink);font-size:14px">Alterações ao horário registado · Semana ${S.sem.semana_iso}</b><span class="sp"></span>
+    ${ed?`<button class="btn" id="baltT" ${porCls?'':'disabled'}>Marcar ${porCls} diferença(s) por classificar como T</button><button class="btn pri" id="baltgen">Verificar e gerar adendas</button>`:''}</div>
+    <p class="muted" style="font-size:12px;margin:0 2px 8px"><b>T</b> temporária (só esta semana) · <b>T+</b> temporária até uma data · <b>D</b> definitiva (passa a ser o horário registado). Os dias a amarelo diferem do horário registado.${sem?` ${sem} funcionário(s) sem horário registado.`:''}</p>
+    ${repor.length?`<div class="card" style="padding:10px 14px;margin-bottom:10px;border-color:var(--bar)"><b>Horário temporário (T+) terminou:</b> ${repor.map(r=>esc(S.fmap[r.funcionario_id].nome)+' (até '+fmtPT(r.fim)+')').join(', ')} ${ed?`<button class="btn" id="brepor" style="margin-left:8px">Repor horário original</button>`:''}</div>`:''}
+    <div id="altchk"></div>
+    <div class="card"><table class="wk alt" style="width:100%"><thead><tr><th>Mec.</th><th>Nome</th>${DAYN.map((d,i)=>`<th>${d} ${fmtD(diaDe(i))}</th>`).join('')}<th>Horas</th><th>Aviso</th></tr></thead>${rows||'<tbody><tr><td colspan="11" class="muted">Sem horários nesta semana.</td></tr></tbody>'}</table></div>`;
+  if(!ed)return;
+  const saveCls=async(fid,tipo,fim)=>{let r;
+    if(!tipo)r=await sb.from('gh_alt_semana').delete().eq('semana_id',S.sem.id).eq('funcionario_id',fid);
+    else if(tipo==='T+'&&!fim){S.alt.cls[fid]={tipo,fim:null,aplicada:false};return drawAlt()}
+    else r=await sb.from('gh_alt_semana').upsert({semana_id:S.sem.id,funcionario_id:fid,tipo,fim:tipo==='T+'?fim:null,aplicada:false},{onConflict:'semana_id,funcionario_id'});
+    if(r.error)return toast(r.error.message,true);
+    if(!tipo)delete S.alt.cls[fid];else S.alt.cls[fid]={...(S.alt.cls[fid]||{}),tipo,fim:tipo==='T+'?fim:null,aplicada:false};drawAlt()};
+  m.querySelectorAll('[data-cls]').forEach(s=>s.onchange=()=>saveCls(s.dataset.cls,s.value,(S.alt.cls[s.dataset.cls]||{}).fim));
+  m.querySelectorAll('[data-fim]').forEach(i=>i.onchange=()=>{if(i.value&&i.value<addDays(ws,6))return toast('A data final tem de ser a partir de '+fmtPT(addDays(ws,6))+'.',true);saveCls(i.dataset.fim,'T+',i.value)});
+  m.querySelectorAll('[data-regis]').forEach(a=>a.onclick=async e=>{e.preventDefault();const f=S.fmap[a.dataset.regis],c=curRow(f.id);
+    const r=await sb.from('gh_horario_registado').upsert({funcionario_id:f.id,h:c.h,p:c.p,horas:f.contrato_horas});if(r.error)return toast(r.error.message,true);toast('Horário base registado');rAlt()});
+  $('#baltT').onclick=async()=>{const arr=lst.filter(f=>{const d=altDiff(f.id);return d&&d.some(Boolean)&&!S.alt.cls[f.id]}).map(f=>({semana_id:S.sem.id,funcionario_id:f.id,tipo:'T',fim:null,aplicada:false}));
+    const r=await sb.from('gh_alt_semana').upsert(arr,{onConflict:'semana_id,funcionario_id'});if(r.error)return toast(r.error.message,true);toast(arr.length+' marcada(s) como T');rAlt()};
+  const br=$('#brepor');if(br)br.onclick=async()=>{for(const r of repor){const b=r.backup;
+      const u=await sb.from('gh_horario_registado').update({h:b.h,p:b.p,horas:b.horas,backup:null,fim:null,atualizado_em:new Date().toISOString()}).eq('funcionario_id',r.funcionario_id);if(u.error)return toast(u.error.message,true)}
+    toast('Horários originais repostos');rAlt()};
+  $('#baltgen').onclick=genAdendas}
+async function genAdendas(){
+  const box=$('#altchk'),ws=S.sem.inicio,items=[],bloq=[],aviso=[];
+  Object.entries(S.alt.cls).forEach(([fid,k])=>{const f=S.fmap[fid];if(!f)return;
+    if(k.tipo==='T+'&&!k.fim)bloq.push(f.nome+': T+ sem data final.');
+    if(k.tipo==='T+'&&k.fim&&k.fim<addDays(ws,6))bloq.push(f.nome+': data final anterior ao fim da semana.');
+    if(!S.alt.reg[fid])bloq.push(f.nome+': sem horário registado para comparar — regista o horário base primeiro.');
+    const d=altDiff(fid);if(d&&!d.some(Boolean))aviso.push(f.nome+': classificado mas igual ao horário registado.');
+    const r=S.alt.reg[fid],c=curRow(fid);items.push({fid,f:{...f,admissao:S.alt.adm[fid]},tipo:k.tipo,fim:k.fim,cur:c,horas:r?r.horas:f.contrato_horas,reg:r,aplicada:k.aplicada})});
+  const errs=S.val.filter(v=>v.nivel==='erro');
+  if(errs.length)bloq.push(`Há ${errs.length} erro(s) de validação na semana (ver Planeamento diário) — resolve antes de gerar adendas.`);
+  const nd=mtList().filter(f=>{const d=altDiff(f.id);return d&&d.some(Boolean)&&!S.alt.cls[f.id]});
+  if(nd.length)aviso.push(`${nd.length} funcionário(s) com diferenças ainda por classificar: ${nd.map(f=>f.nome).join(', ')}.`);
+  if(!items.length)bloq.push('Nenhuma alteração classificada (T, T+ ou D).');
+  box.innerHTML=`<div class="card" style="padding:10px 14px;margin-bottom:10px;border-color:${bloq.length?'var(--err)':'var(--ok)'}">${bloq.length?'<b style="color:var(--err)">Não é possível gerar:</b><ul>'+bloq.map(x=>'<li>'+esc(x)+'</li>').join('')+'</ul>':'<b style="color:var(--ok)">Verificação concluída — adendas geradas.</b>'}${aviso.length?'<b>Avisos:</b><ul>'+aviso.map(x=>'<li>'+esc(x)+'</li>').join('')+'</ul>':''}</div>`;
+  if(bloq.length)return;
+  try{await adendasPDF(items)}catch(e){return pdfErr(e)}
+  for(const it of items){if(it.aplicada||it.tipo==='T')continue;
+    const row={funcionario_id:it.fid,h:it.cur.h,p:it.cur.p,horas:it.horas,atualizado_em:new Date().toISOString()};
+    if(it.tipo==='D'){row.backup=null;row.fim=null}
+    else{row.backup=(it.reg.backup&&it.reg.fim&&it.reg.fim>=ws)?it.reg.backup:{h:it.reg.h,p:it.reg.p,horas:it.reg.horas};row.fim=it.fim}
+    const u=await sb.from('gh_horario_registado').upsert(row);if(u.error)return toast('Adenda gerada, mas falhou atualizar o registo: '+u.error.message,true)}
+  await sb.from('gh_alt_semana').update({aplicada:true}).eq('semana_id',S.sem.id);
+  toast('Adendas geradas e horário registado atualizado');rAlt()}
+
+/* Trabalho suplementar */
+const durTxt=t=>{const f=s=>{const [h,m]=s.split(':');return +h*60+ +m};let d=f(t.fim)-f(t.inicio);if(d<0)d+=1440;return Math.floor(d/60)+'H'+p2(d%60)+'M'};
+async function rTS(){
+  const m=$('#main'),r=await sb.from('gh_trab_suplementar').select('*').eq('semana_id',S.sem.id).order('dia').order('inicio');
+  if(r.error){m.innerHTML='<div class="empty">Erro ao carregar: '+esc(r.error.message)+'</div>';return}
+  if(S.tab!=='ts')return;
+  const L=r.data||[],ed=canEdit();
+  const rows=L.map(t=>{const f=S.fmap[t.funcionario_id]||{nome:'—',mec:''};return `<tr><td>${fmtPT(t.dia)}</td><td>${esc(f.nome)} (${f.mec})</td><td>${t.inicio.slice(0,5)}</td><td>${t.fim.slice(0,5)}</td><td>${durTxt(t)}</td><td>${esc(t.motivo||'')}</td>${ed?`<td><button class="btn" data-del="${t.id}">Apagar</button></td>`:''}</tr>`}).join('');
+  m.innerHTML=`<div class="legend" style="margin-top:0"><b style="color:var(--ink);font-size:14px">Acréscimo de horas de trabalho · Semana ${S.sem.semana_iso}</b><span class="sp"></span><button class="btn pri" id="btspdf">Descarregar PDF para assinar</button></div>
+  ${ed?`<div class="card" style="padding:10px 14px;margin-bottom:10px;display:flex;gap:8px;flex-wrap:wrap;align-items:end">
+    <label class="muted" style="font-size:12px">Dia<br><select id="ts_d" class="btn">${DAYN.map((d,i)=>`<option value="${diaDe(i)}">${d} ${fmtD(diaDe(i))}</option>`).join('')}</select></label>
+    <label class="muted" style="font-size:12px">Funcionário<br><select id="ts_f" class="btn" style="max-width:220px">${S.func.map(f=>`<option value="${f.id}">${esc(f.nome)}</option>`).join('')}</select></label>
+    <label class="muted" style="font-size:12px">Início<br><input id="ts_i" type="time" class="btn" step="900"></label>
+    <label class="muted" style="font-size:12px">Termo<br><input id="ts_e" type="time" class="btn" step="900"></label>
+    <label class="muted" style="font-size:12px;flex:1;min-width:200px">Motivo<br><input id="ts_m" class="btn" style="width:100%" placeholder="Motivo para acréscimo de horas"></label>
+    <button class="btn dark" id="ts_add">Adicionar</button></div>`:''}
+  <div class="card"><table class="wk" style="width:100%"><thead><tr><th>Dia</th><th>Funcionário</th><th>Início</th><th>Termo</th><th>Acréscimo</th><th>Motivo</th>${ed?'<th></th>':''}</tr></thead><tbody>${rows||'<tr><td colspan="7" class="muted">Sem acréscimos registados nesta semana.</td></tr>'}</tbody></table></div>`;
+  $('#btspdf').onclick=async()=>{try{
+    const J=await getPDF(),doc=new J({unit:'mm',format:'a4',orientation:'landscape'});
+    doc.setFont('helvetica','bold');doc.setFontSize(13);doc.text('ACRÉSCIMO DE HORAS DE TRABALHO',148.5,14,{align:'center'});
+    doc.setFontSize(8);doc.setFont('helvetica','normal');doc.text(`${EMPRESA.slice(0,28).trim()} · Semana ${S.sem.semana_iso}`,148.5,19,{align:'center'});
+    const rr=[{bold:true,cells:['Dia','Funcionário','Início','Termo','Acréscimo','Motivo para acréscimo de horas','Assinatura Funcionário','Assinatura Gerente']}];
+    L.forEach(t=>{const f=S.fmap[t.funcionario_id]||{nome:'—',mec:''};rr.push({cells:[fmtPT(t.dia),f.nome+' ('+f.mec+')',t.inicio.slice(0,5),t.fim.slice(0,5),durTxt(t),t.motivo||'','','']})});
+    for(let i=L.length;i<12;i++)rr.push({cells:['','','','','','','','']});
+    pdfTable(doc,10,24,[22,52,16,16,20,70,40,41],rr,{fs:8,lh:11,pageBreak:200,onBreak:()=>{doc.addPage();return 15}});
+    savePDF(doc,`Trabalho suplementar semana ${S.sem.semana_iso}.pdf`)}catch(e){pdfErr(e)}};
+  if(!ed)return;
+  $('#ts_add').onclick=async()=>{const i=$('#ts_i').value,e=$('#ts_e').value;if(!i||!e)return toast('Indica início e termo.',true);if(i===e)return toast('Início e termo não podem ser iguais.',true);
+    const x=await sb.from('gh_trab_suplementar').insert({semana_id:S.sem.id,funcionario_id:$('#ts_f').value,dia:$('#ts_d').value,inicio:i,fim:e,motivo:$('#ts_m').value.trim()||null});
+    if(x.error)return toast(x.error.message,true);toast('Acréscimo registado');rTS()};
+  m.querySelectorAll('[data-del]').forEach(b=>b.onclick=async()=>{const x=await sb.from('gh_trab_suplementar').delete().eq('id',b.dataset.del);if(x.error)return toast(x.error.message,true);rTS()})}
 
 /* ---------- Histórico ---------- */
 async function rHist(){
