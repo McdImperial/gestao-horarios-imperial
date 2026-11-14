@@ -440,6 +440,9 @@ table.vt td small i.lo{color:var(--warn)}table.vt td small i.hi{color:var(--serv
 .slot.tgt{cursor:pointer}
 .slot.tgt:hover{background:var(--surface-2)}
 .slot.fi{background:var(--serv-tint)}
+.btn.ico{width:36px;height:36px;padding:0;display:inline-flex;align-items:center;justify-content:center;align-self:end;color:var(--crit)}.btn.ico svg{pointer-events:none}
+.trgrid{grid-template-columns:repeat(3,minmax(0,1fr)) 36px}@media(max-width:640px){.trgrid{grid-template-columns:minmax(0,1fr) 36px}.trgrid .field{grid-column:1/-1}}
+#expwrap .trgrid{grid-template-columns:minmax(0,1fr)}
 .fistrip{padding:10px 14px;margin-bottom:12px}.fish{display:flex;flex-wrap:wrap;gap:4px 14px;align-items:baseline;margin-bottom:8px}.fish b{font-family:var(--f-display);font-size:18px}
 .fiL{display:grid;gap:8px;grid-template-columns:repeat(auto-fill,minmax(290px,1fr))}.fir{display:grid;grid-template-columns:1fr;gap:6px;border:1px solid var(--line);border-left:4px solid var(--serv);border-radius:8px;padding:8px 10px;background:var(--surface)}
 .fin{display:flex;flex-direction:column}.fin span{font-size:13px;color:var(--ink-2)}.fip{font-size:14px}.fip .tl{margin-right:6px}
@@ -1267,13 +1270,15 @@ function areasPanel(A){
     <div class="stk"><span class="sl">Guia <small>${ga}</small></span><div class="sb guide">${seg(A.guide,ga)}</div></div></div>
    <p class="anote"><b>Posicionados</b> conta os colaboradores produtivos em cada área; quem está em formação não entra. <b>Guia</b> conta os postos abertos pelo guia para ${info().N} funcionários. As duas barras mostram como a equipa se reparte por área, planificado contra guia.</p></div></details>`;
 }
+const TRASH='<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 6h18M8 6V4h8v2M6 6l1 14h10l1-14M10 11v5M14 11v5"/></svg>';
+function withSel(l,v){return v&&l.indexOf(v)<0?l.concat(v):l;}
 function formHtml(T,A,st){
   const cands=st.filter(x=>!x.ref), used=new Set(T.train.map(t=>t.st));
   const tr=T.train.length?T.train.map((t,i)=>{
     const o=cands.map(x=>`<option value="${x.id}"${x.id===t.st?" selected":""}${used.has(x.id)&&x.id!==t.st?" disabled":""}>${esc(x.l)} · ${x.area}</option>`).join("");
     return `${t.act?`<div class="ctnote" style="grid-column:1/-1"><b>${esc(FI[t.act][1])}</b> · plano de formação (Mapa Folgas)</div>`:""}<div class="trgrid"><label class="field"><span class="tl">Posto em formação</span><select data-tr-st="${i}"><option value="">Escolher posto</option>${o}</select></label>
-     <label class="field"><span class="tl">Pessoa em formação</span><select data-tr-who="${i}">${opts(allNames(),t.who,"Escolher funcionário")}</select></label>
-     <label class="field"><span class="tl">Quem dá</span><select data-tr-by="${i}">${opts(allNames().filter(n=>canTeach(n)||n===t.by),t.by,"Escolher formador")}</select></label><button class="btn small" data-act="trRm" data-i="${i}">Remover</button></div>`;
+     <label class="field"><span class="tl">Pessoa em formação</span><select data-tr-who="${i}">${opts(withSel(allNames(),t.who),t.who,"Escolher funcionário")}</select></label>
+     <label class="field"><span class="tl">Quem dá</span><select data-tr-by="${i}">${opts(allNames().filter(n=>canTeach(n)||n===t.by),t.by,"Escolher formador")}</select></label><button class="btn small ico" data-act="trRm" data-i="${i}" title="Remover" aria-label="Remover">${TRASH}</button></div>`;
   }).join(""):`<div class="note">Sem formação inicial neste turno. Ao escolher o posto abre-se uma célula extra (FI) nesse posto, onde fica a pessoa em formação. Não conta como produtiva.</div>`;
   const ct=T.cont.length?T.cont.map((c,i)=>{
     const o=cands.map(x=>`<option value="${x.id}"${x.id===c.st?" selected":""}>${esc(x.l)} · ${x.area}</option>`).join("");
@@ -1281,9 +1286,9 @@ function formHtml(T,A,st){
     const note=c.who?(pos?`<b>${esc(c.who)}</b> está posicionado em <b>${esc(pos.l)}</b> e aparece com ★.`:`<b>${esc(c.who)}</b> ainda não está posicionado, por isso a ★ não aparece.`):"";
     const warn=c.who&&c.by&&c.who===c.by?` <span style="color:var(--crit)">Quem recebe e quem dá não podem ser a mesma pessoa.</span>`:"";
     return `<div class="trgrid"><label class="field"><span class="tl">Posto da formação</span><select data-ct-st="${i}"><option value="">Escolher posto</option>${o}</select></label>
-     <label class="field"><span class="tl">Quem recebe</span><select data-ct-who="${i}">${opts(allNames(),c.who,"Escolher funcionário")}</select></label>
+     <label class="field"><span class="tl">Quem recebe</span><select data-ct-who="${i}">${opts(withSel(allNames(),c.who),c.who,"Escolher funcionário")}</select></label>
      <label class="field"><span class="tl">Quem dá</span><select data-ct-by="${i}">${opts(allNames().filter(n=>canTeach(n)||n===c.by),c.by,"Escolher formador")}</select></label>
-     <button class="btn small" data-act="ctRm" data-i="${i}">Remover</button>${note||warn?`<div class="ctnote">${note}${warn}</div>`:""}</div>`;
+     <button class="btn small ico" data-act="ctRm" data-i="${i}" title="Remover" aria-label="Remover">${TRASH}</button>${note||warn?`<div class="ctnote">${note}${warn}</div>`:""}</div>`;
   }).join(""):`<div class="note">Sem formação contínua neste turno. Indica o posto, quem recebe e quem dá; quem recebe continua produtivo e fica com ★ no posicionamento.</div>`;
   return `<div><h3 style="font-size:19px;margin-bottom:4px">Formação inicial</h3><p class="sub2">A pessoa em formação inicial ocupa uma célula extra no posto e não conta como produtiva. Indica quem dá a formação: só treinadores, RPs e equipa de gestão.</p>${tr}<div style="margin-top:8px"><button class="btn small" data-act="trAdd">+ Adicionar formação inicial</button></div></div>
    <div><h3 style="font-size:19px;margin-bottom:4px">Formação contínua</h3><p class="sub2">Posto da formação, quem recebe e quem dá (treinadores, RPs e equipa de gestão).</p>${ct}<div style="margin-top:8px"><button class="btn small" data-act="ctAdd">+ Adicionar formação contínua</button></div></div>`;
