@@ -440,6 +440,9 @@ table.vt td small i.lo{color:var(--warn)}table.vt td small i.hi{color:var(--serv
 .slot.tgt{cursor:pointer}
 .slot.tgt:hover{background:var(--surface-2)}
 .slot.fi{background:var(--serv-tint)}
+.fistrip{padding:10px 14px;margin-bottom:12px}.fish{display:flex;flex-wrap:wrap;gap:4px 14px;align-items:baseline;margin-bottom:8px}.fish b{font-family:var(--f-display);font-size:18px}
+.fiL{display:grid;gap:8px;grid-template-columns:repeat(auto-fill,minmax(290px,1fr))}.fir{display:grid;grid-template-columns:1fr;gap:6px;border:1px solid var(--line);border-left:4px solid var(--serv);border-radius:8px;padding:8px 10px;background:var(--surface)}
+.fin{display:flex;flex-direction:column}.fin span{font-size:13px;color:var(--ink-2)}.fip{font-size:14px}.fip .tl{margin-right:6px}
 .tag{font-family:var(--f-display);font-weight:700;font-size:11px;background:var(--serv);color:#fff;border-radius:4px;padding:0 5px;flex:none}
 .chip.ov{background:var(--over-tint);border-color:var(--warn)}
 .chip.dup{background:var(--crit-tint);border-color:var(--crit)}
@@ -654,7 +657,8 @@ function isoWeek(iso){const d=new Date(iso+"T12:00:00Z");const day=(d.getUTCDay(
 function isoWeekStart(y,w){const j=new Date(Date.UTC(y,0,4,12));const day=(j.getUTCDay()+6)%7;j.setUTCDate(j.getUTCDate()-day+(w-1)*7);return j.toISOString().slice(0,10);}
 function colIdx(L){let n=0;for(const ch of L)n=n*26+ch.charCodeAt(0)-64;return n-1;}
 function xlDate(n){return new Date(Math.round((n-25569)*864e5)).toISOString().slice(0,10);}
-function parseXlsxRows(mapa,vend){ // mapa/vend: matrizes (linha→coluna a partir de A1) das folhas «Mapa MT» e «Planeamento Vendas»
+const FI={RSG:["","Ready Set Grow"],BAT:["batateira","Batatas Fritas"],FRI:["fritos","Fritadeira"],GRE1:["grelh","Grelhador"],GRE2:["grelh","Grelhador"],AMB:["","Ambientação e Preparação"],PP1:["prep1","Preparação dos Produtos"],PP2:["prep2","Preparação dos Produtos"],PGLU:["","Preparação dos Produtos sem Glúten"],BEB1:["bebidas","Bebidas e Sobremesas"],BEB2:["sobrem","Bebidas e Sobremesas"],CPA:["","Confeção do pequeno-almoço"],RPA:["","Reunir pequeno-almoço"],SPP1:["cx7","Serviço, Pedir e Pagar"],SPP2:["cx6","Serviço, Pedir e Pagar"],EXP:["exp1","Serviço e Montagem · Expedidor"],APO:["apFrios","Serviço e Montagem · Apoio Quentes e Frios"],APR:["apres","Serviço e Montagem · Apresentador"],SAL1:["piso0","Salão e Kiosk"],SAL2:["pisoM1","Salão e Kiosk"]};
+function parseXlsxRows(mapa,vend,folgas){ // mapa/vend: matrizes (linha→coluna a partir de A1) das folhas «Mapa MT» e «Planeamento Vendas»
   const t=String((mapa[2]&&mapa[2][0])||""), m=/Segunda-Feira,\s*(\d{1,2})\s+de\s+(\S+)\s+de\s+(\d{4})/i.exec(t);
   let first=null;
   if(m&&MESES[m[2].slice(0,3).toLowerCase()]!=null) first=iso(+m[3],MESES[m[2].slice(0,3).toLowerCase()],+m[1]);
@@ -683,7 +687,13 @@ function parseXlsxRows(mapa,vend){ // mapa/vend: matrizes (linha→coluna a part
     for(let d=0;d<7;d++){const x=row[2+2*d]; if(typeof x==="number"&&x>0) sal[days[d]][h]=x;}
   });
   if(!nh) throw new Error("Não encontrei as vendas por hora na folha «Planeamento Vendas».");
-  return {sch:{from:first,days,staff},sal};
+  let nfi=0;
+  if(folgas&&folgas[2]){ /* plano de formação inicial: folha «Mapa Folgas», um código de posto por dia (RSG, SAL1, BAT…) */
+    const hd=folgas[2]; let c0=-1; for(let c=12;c<hd.length;c++){ if(typeof hd[c]==="number"&&xlDate(hd[c])===first){c0=c;break;} }
+    if(c0>=0){ const byMec=new Map(staff.map(x=>[x.mec,x]));
+      for(let r=3;r<folgas.length;r++){ const row=folgas[r]||[], a=row[0]; if(typeof a!=="number"||!(a>0)) continue; const st=byMec.get(String(a)); if(!st) continue;
+        for(let d=0;d<7;d++){ const v=row[c0+d]; const code=v==null?"":String(v).trim().toUpperCase(); if(FI[code]){ st.days[d].fi=code; nfi++; } } } } }
+  return {sch:{from:first,days,staff,ver:Date.now()},sal,nfi};
 }
 /*ENDPARSE*/
 
@@ -857,7 +867,15 @@ const app=$("app"), layer=$("layer");
 
 const planKey=(d,t)=>d+"|"+TID[t];
 function fixRP(T,k){let ch=false; Object.keys(T.assign||{}).forEach(key=>{if(/^rp_/.test(key)&&T.assign[key]&&!isRP(T.assign[key])){delete T.assign[key];ch=true;}}); if(ch&&k){S.dirty[k]=1;S.fixed=(S.fixed||0)+1;} return ch;}
-function plan(d,t){const k=planKey(d,t); if(!S.plans[k]){S.plans[k]=fresh(t); applySales(S.plans[k],d,t);} fixRP(S.plans[k],k); return S.plans[k];}
+function syncFI(T,d,t){ /* formação inicial vinda do plano do Mapa Folgas: quem está em formação, que ação e que posto; o formador escolhe o gerente de turno */
+  const W=S.week.sch; if(!W) return false; const di=W.days.indexOf(d); if(di<0) return false; const stamp=String(W.ver||W.from); if(T.fk===stamp) return false; T.fk=stamp;
+  const av=new Set((availFor(t,d)||[]).map(x=>x.name)), want=[], x=new Set(T.fiX||[]);
+  W.staff.forEach(s=>{const dy=s.days[di]; if(dy&&dy.fi&&av.has(s.name)&&FI[dy.fi]&&!x.has(s.name+"|"+dy.fi)) want.push({who:s.name,act:dy.fi});});
+  const keep=T.train.filter(e=>!e.auto||want.some(w=>w.who===e.who&&w.act===e.act)); let ch=keep.length!==T.train.length;
+  want.forEach(w=>{ if(!keep.some(e=>e.auto&&e.who===w.who&&e.act===w.act)){ keep.push({st:FI[w.act][0],who:w.who,by:"",auto:1,act:w.act}); ch=true; } });
+  T.train=keep; return ch;
+}
+function plan(d,t){const k=planKey(d,t); if(!S.plans[k]){S.plans[k]=fresh(t); applySales(S.plans[k],d,t);} fixRP(S.plans[k],k); if(syncFI(S.plans[k],d,t)){S.dirty[k]=1; scheduleSave();} return S.plans[k];}
 const cur=()=>plan(S.date,S.turno);
 function applySales(T,d,t){const day=S.week.sal&&S.week.sal[d]; if(!day) return false; TURNOS[t].forEach((h,i)=>{const v=day[hourNum(h)]; if(v!=null) T.rows[i].t=v;}); return true;}
 const pkIdx=t=>(S.cfg.pk&&S.cfg.pk[t]!=null)?S.cfg.pk[t]:1;
@@ -982,18 +1000,18 @@ function applyWeekToPlans(){Object.keys(S.plans).forEach(k=>{const [d,t]=k.split
 const XLSXJS="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js";
 async function readXlsx(f){
   if(!window.XLSX) await loadScript(XLSXJS);
-  const X=window.XLSX, wb=X.read(new Uint8Array(await f.arrayBuffer()),{type:"array",sheets:["Mapa MT","Planeamento Vendas"],cellFormula:false,cellHTML:false,cellStyles:false,cellNF:false});
+  const X=window.XLSX, wb=X.read(new Uint8Array(await f.arrayBuffer()),{type:"array",sheets:["Mapa MT","Planeamento Vendas","Mapa Folgas"],cellFormula:false,cellHTML:false,cellStyles:false,cellNF:false});
   const get=n=>{const ws=wb.Sheets[n]; if(!ws) throw new Error("Não encontrei a folha «"+n+"» neste ficheiro."); const e=X.utils.decode_range(ws["!ref"]).e; return X.utils.sheet_to_json(ws,{header:1,raw:true,defval:null,blankrows:true,range:{s:{r:0,c:0},e}});};
-  return {mapa:get("Mapa MT"),vend:get("Planeamento Vendas")};
+  return {mapa:get("Mapa MT"),vend:get("Planeamento Vendas"),folgas:wb.Sheets["Mapa Folgas"]?get("Mapa Folgas"):null};
 }
 async function handleFile(f){
   if(!f) return;
   S.msg={t:"",m:"A ler "+f.name+"…"}; render();
   try{
     if(/\.(xlsm|xlsx|xls)$/i.test(f.name)){
-      const x=await readXlsx(f), r=parseXlsxRows(x.mapa,x.vend);
+      const x=await readXlsx(f), r=parseXlsxRows(x.mapa,x.vend,x.folgas);
       setSchedule(r.sch,f.name+" · Mapa MT"); setSales(r.sal,f.name+" · Planeamento Vendas"); applyWeekToPlans(); saveShared("week");
-      S.msg={t:"good",m:`Ficheiro lido: horário de ${r.sch.staff.length} colaboradores (${dPT(r.sch.days[0])} a ${dPT(r.sch.days[6])}) e vendas por hora de 7 dias.`};
+      S.msg={t:"good",m:`Ficheiro lido: horário de ${r.sch.staff.length} colaboradores (${dPT(r.sch.days[0])} a ${dPT(r.sch.days[6])}) e vendas por hora de 7 dias${r.nfi?`, mais ${r.nfi} dias de formação inicial`:""}.`};
       render(); return;
     }
     const pages=await pdfPages(f);
@@ -1096,11 +1114,20 @@ function viewPos(){
    <div class="panel kpi ${A.free?"warn":"ok"}"><span>Por preencher</span><b>${A.free}</b><small> ${A.free?"postos do guia":"guia completo"}</small></div>
    <div class="panel kpi ${alerts?"warn":"ok"}"><span>Alertas</span><b>${alerts}</b><small> ${alerts?"ver células a amarelo/vermelho":"tudo em ordem"}</small></div></div>`;
   h+=avisos(A,I,T);
+  h+=fiStrip(T,A,st);
   h+=guiaPanel(A,I,T);
   h+=`<div class="work ${S.poolHide?"ph":""}">${poolHtml(A,T)}${folhaHtml(T,A,st)}</div>`;
   h+=`<details class="panel detalhes" data-d="vend" ${S.open.vend?"open":""} style="margin-top:12px"><summary>Vendas, IGC e distribuição por área <span class="muted" style="font-weight:500">· ${eur(totals(T.rows).t)} · GC ${grp(totals(T.rows).g)} · Produção ${A.real["Produção"]} · Serviço ${A.real["Serviço"]} · Sala ${A.real["Sala"]}</span></summary>${vendHtml(T,A)}</details>`;
   h+=`<details class="panel detalhes" data-d="form" ${S.open.form?"open":""}><summary>Formação inicial e contínua <span class="muted" style="font-weight:500">· ${T.train.length} inicial · ${T.cont.length} contínua</span></summary><div class="det-body">${formHtml(T,A,st)}</div></details>`;
   return h;
+}
+function fiStrip(T,A,st){
+  const L=T.train.map((t,i)=>({t,i})).filter(x=>x.t.auto&&x.t.who); if(!L.length) return "";
+  const stl=id=>{const z=st.find(x=>x.id===id); return z?z.l:"";};
+  const falta=L.filter(x=>!x.t.by).length;
+  return `<div class="panel fistrip"><div class="fish"><b>Formação inicial neste turno</b><span class="muted">${L.length} ${L.length===1?"pessoa":"pessoas"} · vem do plano de formação do Mapa Folgas${falta?` · <b style="color:var(--warn)">falta escolher ${falta} ${falta===1?"formador":"formadores"}</b>`:""}</span></div>
+   <div class="fiL">${L.map(x=>`<div class="fir"><div class="fin"><b>${esc(x.t.who)}</b><span>${esc(FI[x.t.act][1])}</span></div><div class="fip"><span class="tl">Posto</span>${x.t.st?esc(stl(x.t.st)):'<span class="muted">sem posto no quadro</span>'}</div>
+    <label class="field fib"><span class="tl">Quem dá a formação</span><select data-tr-by="${x.i}">${opts(allNames().filter(n=>canTeach(n)||n===x.t.by),x.t.by,"Escolher formador")}</select></label></div>`).join("")}</div></div>`;
 }
 function avisos(A,I,T){
   const o=[];
@@ -1113,7 +1140,7 @@ function avisos(A,I,T){
   const rpBad=A.slots.filter(x=>x.id==="rp"&&x.val&&!isRP(x.val)); if(rpBad.length) o.push(["crit","RP",`${rpBad.map(x=>esc(x.val)).join(", ")} está no posto de RP mas não tem a função RP.`]);
   const rpZ=A.slots.filter(x=>x.val&&isRP(x.val)&&!RP_OK.has(slotZone(x.id))); if(rpZ.length) o.push(["crit","RP",`${rpZ.map(x=>esc(x.val)+" ("+esc(x.l)+")").join(", ")}: os RPs só podem estar em Sala Clientes, Balcão Pagamento ou Balcão Entrega.`]);
   const stl=id=>{const z=stationsFor(S.turno).find(x=>x.id===id); return z?z.l:id;};
-  T.train.forEach(t=>{ if(!t.st||!t.who) return; if(!t.by) o.push(["warn","Formação",`Falta indicar quem dá a formação inicial de ${esc(t.who)} em ${esc(stl(t.st))}.`]);
+  T.train.forEach(t=>{ if(!t.who||(!t.st&&!t.act)) return; if(!t.by) o.push(["warn","Formação",`Falta indicar quem dá a formação inicial de ${esc(t.who)}${t.act?" ("+esc(FI[t.act][1])+")":""}${t.st?" em "+esc(stl(t.st)):""}.`]);
     else if(t.by===t.who) o.push(["warn","Formação",`${esc(t.who)} não pode dar a própria formação.`]);
     else if(!canTeach(t.by)) o.push(["warn","Formação",`${esc(t.by)} dá formação inicial mas não é treinador, RP nem gestão.`]);});
   (T.cont||[]).forEach(c=>{ if(c.by&&!canTeach(c.by)) o.push(["warn","Formação",`${esc(c.by)} dá formação contínua mas não é treinador, RP nem gestão.`]);});
@@ -1244,7 +1271,7 @@ function formHtml(T,A,st){
   const cands=st.filter(x=>!x.ref), used=new Set(T.train.map(t=>t.st));
   const tr=T.train.length?T.train.map((t,i)=>{
     const o=cands.map(x=>`<option value="${x.id}"${x.id===t.st?" selected":""}${used.has(x.id)&&x.id!==t.st?" disabled":""}>${esc(x.l)} · ${x.area}</option>`).join("");
-    return `<div class="trgrid"><label class="field"><span class="tl">Posto em formação</span><select data-tr-st="${i}"><option value="">Escolher posto</option>${o}</select></label>
+    return `${t.act?`<div class="ctnote" style="grid-column:1/-1"><b>${esc(FI[t.act][1])}</b> · plano de formação (Mapa Folgas)</div>`:""}<div class="trgrid"><label class="field"><span class="tl">Posto em formação</span><select data-tr-st="${i}"><option value="">Escolher posto</option>${o}</select></label>
      <label class="field"><span class="tl">Pessoa em formação</span><select data-tr-who="${i}">${opts(allNames(),t.who,"Escolher funcionário")}</select></label>
      <label class="field"><span class="tl">Quem dá</span><select data-tr-by="${i}">${opts(allNames().filter(n=>canTeach(n)||n===t.by),t.by,"Escolher formador")}</select></label><button class="btn small" data-act="trRm" data-i="${i}">Remover</button></div>`;
   }).join(""):`<div class="note">Sem formação inicial neste turno. Ao escolher o posto abre-se uma célula extra (FI) nesse posto, onde fica a pessoa em formação. Não conta como produtiva.</div>`;
@@ -1445,7 +1472,7 @@ function doAct(a,el){
   else if(a==="poolMode"){S.poolAll=el.dataset.all==="1";render();}
   else if(a==="poolT"){ if(window.innerWidth<=820&&!EV.target.closest("button,input")){S.poolOpen=!S.poolOpen;render();} }
   else if(a==="trAdd"){S.open.form=true;T.train.push({st:"",who:"",by:""});touch();}
-  else if(a==="trRm"){T.train.splice(+el.dataset.i,1);touch();}
+  else if(a==="trRm"){const e=T.train[+el.dataset.i]; if(e&&e.auto&&e.who){T.fiX=(T.fiX||[]).concat(e.who+"|"+e.act);} T.train.splice(+el.dataset.i,1);touch();}
   else if(a==="ctAdd"){S.open.form=true;T.cont.push({st:"",who:"",by:""});touch();}
   else if(a==="ctRm"){T.cont.splice(+el.dataset.i,1);touch();}
   else if(a==="retry"){S.dbState="saving";flush();render();}
