@@ -871,7 +871,7 @@ const app=$("app"), layer=$("layer");
 const planKey=(d,t)=>d+"|"+TID[t];
 function fixRP(T,k){let ch=false; Object.keys(T.assign||{}).forEach(key=>{if(/^rp_/.test(key)&&T.assign[key]&&!isRP(T.assign[key])){delete T.assign[key];ch=true;}}); if(ch&&k){S.dirty[k]=1;S.fixed=(S.fixed||0)+1;} return ch;}
 function syncFI(T,d,t){ /* formação inicial vinda do plano do Mapa Folgas: quem está em formação, que ação e que posto; o formador escolhe o gerente de turno */
-  const W=S.week.sch; if(!W) return false; const di=W.days.indexOf(d); if(di<0) return false; const stamp=String(W.ver||W.from); if(T.fk===stamp) return false; T.fk=stamp;
+  const W=S.week.sch; if(!W) return false; const di=W.days.indexOf(d); if(di<0) return false; if(T.train.some(e=>e.auto&&!e.who)){T.train=T.train.filter(e=>!(e.auto&&!e.who)); T.fk=null;} const stamp=String(W.ver||W.from); if(T.fk===stamp) return false; T.fk=stamp;
   const av=new Set((availFor(t,d)||[]).map(x=>x.name)), want=[], x=new Set(T.fiX||[]);
   W.staff.forEach(s=>{const dy=s.days[di]; if(dy&&dy.fi&&av.has(s.name)&&FI[dy.fi]&&!x.has(s.name+"|"+dy.fi)) want.push({who:s.name,act:dy.fi});});
   const keep=T.train.filter(e=>!e.auto||want.some(w=>w.who===e.who&&w.act===e.act)); let ch=keep.length!==T.train.length;
@@ -1384,7 +1384,7 @@ function viewConfig(){
 let DRAG=null, EV=null;
 const getV=t=>{const T=cur(),k=t[0],v=t.slice(2); return k==="s"?(T.assign[v]||""):(T.train[+v]?T.train[+v].who:"");};
 const setV=(t,val)=>{const T=cur(),k=t[0],v=t.slice(2); if(k==="s"){if(val)T.assign[v]=val; else delete T.assign[v];} else if(T.train[+v]) T.train[+v].who=val;};
-function removeName(name){const T=cur(); Object.keys(T.assign).forEach(k=>{if(T.assign[k]===name) delete T.assign[k];}); T.train.forEach(t=>{if(t.who===name)t.who="";});}
+function removeName(name){const T=cur(); Object.keys(T.assign).forEach(k=>{if(T.assign[k]===name) delete T.assign[k];}); T.train.forEach(t=>{if(t.who===name&&!t.auto)t.who="";});}
 function forceOpen(tok){ if(tok[0]!=="s") return; const A=analyzeFor(S.date,S.turno), sl=A.slots.find(x=>x.key===tok.slice(2)); if(sl&&sl.status==="closed") cur().forced[sl.key]=true; }
 /* impressão: 1 folha A4 landscape, margens mínimas (4 mm), ficheiro PDF pronto a imprimir */
 const CDN_H2C="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js", CDN_PDF="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js";
@@ -1470,7 +1470,7 @@ function doAct(a,el){
   else if(a==="gTab"){S.gmTab=el.dataset.k;render();}
   else if(a==="adj"){T.adj+=+el.dataset.d;touch();}
   else if(a==="dist"){ if(Object.keys(T.assign).length&&!S.armDist){S.armDist=true;setTimeout(()=>{S.armDist=false;render();},4000);render();return;} S.armDist=false; distribute(); }
-  else if(a==="clr"){ if(!S.armClr){S.armClr=true;setTimeout(()=>{S.armClr=false;render();},4000);render();return;} S.armClr=false; T.assign={};T.forced={};T.train.forEach(t=>t.who="");S.msg=null;touch(); }
+  else if(a==="clr"){ if(!S.armClr){S.armClr=true;setTimeout(()=>{S.armClr=false;render();},4000);render();return;} S.armClr=false; T.assign={};T.forced={};T.train.forEach(t=>{if(!t.auto)t.who="";});S.msg=null;touch(); }
   else if(a==="cancelSel"){S.sel=null;render();}
   else if(a==="exp"){exportPdf();}
   else if(a==="poolH"){S.poolHide=!S.poolHide;render();}
