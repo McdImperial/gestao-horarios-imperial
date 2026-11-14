@@ -544,6 +544,7 @@ body.printing #printimg img{display:block;width:auto;height:auto;max-width:291mm
 #expwrap .g-lab span{font-size:11px}#expwrap .g-lab span em{font-size:9px}
 #expwrap .g-lin{flex-wrap:nowrap}#expwrap .lt{font-size:9px;padding:0 2px}#expwrap .g-lin span{gap:0 1px}#expwrap .ld{display:none}
 #expwrap .g-col .b .pr{font-size:12px}#expwrap .g-col .n,#expwrap .g-col .v{font-size:11px}
+#expwrap .fprint{padding:12px 14px;margin:0}#expwrap .fprint h3{font-size:16px;margin:0 0 4px}#expwrap .fprint h3+ul,#expwrap .fprint h3+p{margin-bottom:10px}#expwrap .fprint ul{list-style:none;margin:0;padding:0}#expwrap .fprint li{display:grid;grid-template-columns:1fr;gap:0;padding:4px 0;border-top:1px solid var(--line);font-size:13px;line-height:1.3}#expwrap .fprint li em{font-style:normal;color:var(--ink-2)}#expwrap .fprint p{font-size:13px;color:var(--ink-2);margin:0}
 #expwrap details.detalhes{margin:0}#expwrap details summary{pointer-events:none}
 #expwrap .trgrid{grid-template-columns:minmax(0,1fr)}
 .areas{margin-top:12px;overflow:hidden}
@@ -1389,12 +1390,20 @@ function forceOpen(tok){ if(tok[0]!=="s") return; const A=analyzeFor(S.date,S.tu
 /* impressão: 1 folha A4 landscape, margens mínimas (4 mm), ficheiro PDF pronto a imprimir */
 const CDN_H2C="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js", CDN_PDF="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js";
 const loadCdn=src=>new Promise((res,rej)=>{if(document.querySelector('script[src="'+src+'"]')) return res(); const e=document.createElement("script"); e.src=src; e.onload=res; e.onerror=()=>rej(new Error("Não foi possível carregar "+src)); document.head.appendChild(e);});
+function fiPrint(){ /* formação em lista compacta para a folha impressa (não deixa a coluna da direita mais alta que a folha) */
+  const T=cur(), st=stationsFor(S.turno), stl=id=>{const z=st.find(x=>x.id===id);return z?z.l:"–";}, v=x=>esc(x||"–");
+  const fi=T.train.filter(t=>t.who||t.st), ct=T.cont.filter(c=>c.who||c.st);
+  const li=(a,b,c)=>`<li><b>${v(a)}</b><span>${b}</span><em>Quem dá: <b>${v(c)}</b></em></li>`;
+  const d=document.createElement("div"); d.className="panel fprint";
+  d.innerHTML=`<h3>Formação inicial</h3>${fi.length?`<ul>${fi.map(t=>li(t.who,esc(t.act?FI[t.act][1]+" · ":"")+(t.st?esc(stl(t.st)):"sem posto no quadro"),t.by)).join("")}</ul>`:`<p>Sem formação inicial neste turno.</p>`}<h3>Formação contínua</h3>${ct.length?`<ul>${ct.map(c=>li(c.who,esc(c.st?stl(c.st):"–"),c.by)).join("")}</ul>`:`<p>Sem formação contínua neste turno.</p>`}`;
+  return d;
+}
 function buildSheet(){ /* folha + guia + formação numa página (usada para imprimir e para o PDF) */
   const wrap=document.createElement("div"); wrap.id="expwrap"; wrap.className="expwrap";
   const f=document.querySelector(".folha").cloneNode(true), side=document.createElement("div"); side.className="expside";
-  const g=document.querySelector(".panel.guia"), fm=document.querySelector('details[data-d="form"]');
+  const g=document.querySelector(".panel.guia");
   if(g){const gc=g.cloneNode(true); gc.querySelectorAll(".laddet,.g-head .btn").forEach(x=>x.remove()); side.appendChild(gc);}
-  if(fm){const fc=fm.cloneNode(true); fc.setAttribute("open",""); side.appendChild(fc);}
+  side.appendChild(fiPrint());
   wrap.append(f,side);
   wrap.querySelectorAll(".x,button").forEach(x=>x.remove());
   wrap.querySelectorAll("select,input").forEach(c=>{const sp=document.createElement("span"); let v=c.tagName==="SELECT"?((c.selectedOptions[0]||{}).textContent||""):c.value; if(!v||/^Escolher|^Definir/.test(v)) v="–"; sp.textContent=v; sp.style.cssText="display:block;font-weight:600;min-height:1.2em"; c.replaceWith(sp);});
