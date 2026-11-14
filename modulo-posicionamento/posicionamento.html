@@ -956,8 +956,8 @@ async function handleFile(f){
       S.msg={t:"good",m:`Horário lido: ${sch.staff.length} colaboradores, de ${dPT(sch.days[0])} a ${dPT(sch.days[6])}.`};
     }else{
       const isT=pages[0].some(i=>/Planifica/i.test(i.s))||pages[0].some(i=>/^Segunda$/i.test(i.s)); const sal=isT?parseSalesT(pages[0],S.week&&S.week.sch&&S.week.sch.from):parseSales(pages[0]); if(!Object.keys(sal).length) throw new Error("Não reconheci este PDF como horário nem como previsão de vendas.");
-      setSales(sal,f.name); applyWeekToPlans(); saveShared("week");
-      S.msg={t:"good",m:`Vendas lidas para ${Object.keys(sal).length} dias e aplicadas aos posicionamentos dessa semana.`};
+      setSales(sal,f.name); applyWeekToPlans(); saveShared("week"); const sd=Object.keys(sal), sc=S.week.sch&&S.week.sch.days; const mism=sc&&!sd.some(d=>sc.includes(d));
+      S.msg=mism?{t:"err",m:`Vendas lidas para ${dPT(sd[0])} a ${dPT(sd[sd.length-1])}, mas o horário carregado é de ${dPT(sc[0])} a ${dPT(sc[6])}. Carrega também o horário dessa semana (Ficheiros).`}:{t:"good",m:`Vendas lidas para ${sd.length} dias (${dPT(sd[0])} a ${dPT(sd[sd.length-1])}) e aplicadas aos posicionamentos dessa semana.`};
     }
   }catch(e){S.msg={t:"err",m:"Erro ao ler o PDF: "+(e&&e.message||e)};}
   render();
@@ -1246,11 +1246,12 @@ function viewSemana(){
   let tot=0,mx=0; days.forEach(d=>{const x=W.sal&&W.sal[d]; if(x) Object.values(x).forEach(v=>{tot+=v; if(v>mx)mx=v;});});
   let h=`<div class="home-head"><div class="today"><div class="eyebrow">Semana</div><h2>${dPT(days[0])} a ${dPT(days[days.length-1])}</h2></div></div>
    <div class="wk-sum"><div class="panel kpi"><span>Colaboradores no horário</span><b>${nS}</b></div><div class="panel kpi"><span>Dias com vendas</span><b>${W.sal?Object.keys(W.sal).length:0}</b></div><div class="panel kpi"><span>Vendas previstas (soma das horas)</span><b>${eur(tot)}</b></div><div class="panel kpi"><span>Hora mais forte</span><b>${eur(mx)}</b></div></div>`;
+  let mxp=mx; days.forEach(d=>TK.forEach(t=>{const v=+pkOf(plan(d,t),t).v||0; if(v>mxp)mxp=v;}));
   h+=`<div class="wk-days">${days.map(d=>{
     const lines=TK.map(t=>{const T=plan(d,t),pk=pkOf(T,t),I=infoFor(d,t),av=availFor(t,d);
       return `<button class="tl2" data-act="abrirDia" data-d="${d}" data-t="${esc(t)}"><span>${t.slice(0,3)}. ${TURNOS[t][pk.i]}</span><b>${pk.v?grp(pk.v)+" €":"—"}</b><b>${I.N||"–"}p${av?" · "+av.length+" pess.":""}</b></button>`;}).join("");
     const hs=[1,1,1].map((_,i)=>0);
-    const bars=TK.map(t=>{const pk=pkOf(plan(d,t),t); return `<i class="r" style="height:${Math.max(2,pk.v/(mx||1)*86)}px" title="${t} ${eur(pk.v)}"></i>`;}).join("");
+    const bars=TK.map(t=>{const pk=pkOf(plan(d,t),t); return `<i class="r" style="height:${Math.max(2,Math.min(86,(+pk.v||0)/(mxp||1)*86))}px" title="${t} ${eur(pk.v)}"></i>`;}).join("");
     return `<article class="panel wk-day ${d===todayISO()?"today":""}"><h4><button data-act="abrirDia" data-d="${d}" data-t="Abertura">${esc(dShort(d))}</button></h4><div class="wk-bars">${bars}</div>${lines}</article>`;}).join("")}</div>`;
   if(W.sch){
     h+=`<details class="panel detalhes" data-d="hor" open><summary>Horário da equipa <span class="muted" style="font-weight:500">· ${esc(W.srcS||"")}</span></summary><div class="det-body"><div class="tbl-scroll"><table class="hor"><thead><tr><th class="who">Colaborador</th>${days.map(d=>`<th>${esc(dShort(d))}</th>`).join("")}</tr></thead><tbody>${W.sch.staff.slice().sort((a,b)=>a.name.localeCompare(b.name,"pt")).map(st=>`<tr><td class="who">${esc(st.name)}</td>${st.days.map(x=>`<td><span class="hcell ${x&&x.k==="T"&&!x.lv?"":"off"}${x&&x.lv?" lv":""}" ${x&&x.lv?'title="Ausente (férias, baixa ou licença): não disponível"':""}>${x&&x.lv&&x.k==="T"?"Aus. ":""}${x&&x.k==="T"&&x.s?fm(x.s[0])+"–"+fm(x.s[1]):esc((x&&x.k)||"")}</span></td>`).join("")}</tr>`).join("")}</tbody></table></div></div></details>`;
