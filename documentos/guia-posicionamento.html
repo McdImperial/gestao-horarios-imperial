@@ -1,0 +1,288 @@
+<!doctype html><html lang="pt-PT"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<meta property="og:title" content="Guia Posicionamento Imperial"><meta property="og:description" content="Como usar o módulo Posicionamento: passo a passo, demo interativa, regras, avisos e lista de verificação."><meta property="og:type" content="website"><meta name="description" content="Guia interativo do módulo Posicionamento do McD Imperial.">
+<style>html{color-scheme:light}body{margin:0}</style><title>Guia Posicionamento Imperial</title>
+
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&family=Space+Grotesk:wght@500;700&display=swap">
+<style>
+:root{--bg:#faf7f2;--card:#fff;--fg:#1f1a17;--mut:#6b625b;--line:#e8e1d8;--red:#c8102e;--red-t:#fde8ec;--yel:#ffbc0d;--yel-t:#fff4d1;--grn:#1f8a4c;--grn-t:#e0f4e8;--amb:#b26a00;--amb-t:#fff0d6;--shadow:0 1px 2px rgba(60,40,20,.06),0 8px 24px rgba(60,40,20,.06)}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]){--bg:#17130f;--card:#221c17;--fg:#f4eee6;--mut:#a89e93;--line:#372e26;--red:#ff4d67;--red-t:#3a171d;--yel:#ffbc0d;--yel-t:#3a2f0d;--grn:#4cc884;--grn-t:#12301f;--amb:#f2a93b;--amb-t:#3a2a0d;--shadow:0 1px 2px #0006,0 8px 24px #0004;color-scheme:dark}}
+:root[data-theme="dark"]{--bg:#17130f;--card:#221c17;--fg:#f4eee6;--mut:#a89e93;--line:#372e26;--red:#ff4d67;--red-t:#3a171d;--yel:#ffbc0d;--yel-t:#3a2f0d;--grn:#4cc884;--grn-t:#12301f;--amb:#f2a93b;--amb-t:#3a2a0d;--shadow:0 1px 2px #0006,0 8px 24px #0004;color-scheme:dark}
+*{box-sizing:border-box}
+body{background:var(--bg);color:var(--fg);font:16px/1.55 Inter,system-ui,sans-serif;padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px));padding-block:0 64px}
+h1,h2,h3{font-family:"Space Grotesk",Inter,sans-serif;text-wrap:balance;line-height:1.15;margin:0}
+.w{max-width:980px;margin:0 auto}
+nav{position:sticky;top:env(safe-area-inset-top,0px);z-index:5;background:color-mix(in srgb,var(--bg) 88%,transparent);backdrop-filter:blur(8px);border-bottom:1px solid var(--line);margin:0 calc(-1*max(16px,env(safe-area-inset-left,0px)))}
+nav .w{display:flex;gap:4px;overflow-x:auto;padding:8px 16px}
+nav a{white-space:nowrap;text-decoration:none;color:var(--mut);font-size:14px;font-weight:500;padding:6px 12px;border-radius:99px}
+nav a:hover,nav a.on{background:var(--yel-t);color:var(--fg)}
+.hero{padding:56px 0 32px}
+.eyebrow{font-size:12px;letter-spacing:.14em;text-transform:uppercase;color:var(--red);font-weight:600}
+h1{font-size:clamp(34px,6vw,60px);margin:10px 0 14px}
+.lead{font-size:18px;color:var(--mut);max-width:60ch}
+.flow{display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:12px;margin-top:28px}
+.flow div{background:var(--card);border:1px solid var(--line);border-radius:16px;padding:16px;box-shadow:var(--shadow)}
+.flow b{display:grid;place-items:center;width:32px;height:32px;border-radius:50%;background:var(--yel);color:#1f1a17;font-family:"Space Grotesk";margin-bottom:8px}
+section{padding:44px 0 8px;scroll-margin-top:60px}
+h2{font-size:clamp(26px,4vw,36px);margin-bottom:6px}
+.sub{color:var(--mut);margin:0 0 20px;max-width:62ch}
+.card{background:var(--card);border:1px solid var(--line);border-radius:18px;padding:20px;box-shadow:var(--shadow)}
+.tabs{display:flex;gap:6px;flex-wrap:wrap;margin-bottom:14px}
+.tabs button,.chip{font:inherit;font-size:14px;font-weight:500;border:1px solid var(--line);background:var(--card);color:var(--fg);padding:8px 14px;border-radius:99px;cursor:pointer}
+.tabs button[aria-selected=true],.chip.on{background:var(--fg);color:var(--bg);border-color:var(--fg)}
+.step{display:grid;grid-template-columns:1fr 1fr;gap:24px;align-items:center}
+@media(max-width:720px){.step{grid-template-columns:1fr}}
+.step h3{font-size:22px;margin-bottom:8px}
+.step ul{padding-left:18px;margin:8px 0}
+.mock{background:var(--bg);border:1px solid var(--line);border-radius:14px;padding:14px;font-size:13px;min-width:0}
+.mock .bar{display:flex;gap:6px;margin-bottom:10px}.mock .bar i{width:9px;height:9px;border-radius:50%;background:var(--line)}
+.row{display:flex;justify-content:space-between;gap:8px;align-items:center;background:var(--card);border:1px solid var(--line);border-radius:10px;padding:8px 10px;margin-bottom:6px}
+.btn{display:inline-block;background:var(--red);color:#fff;border-radius:9px;padding:8px 12px;font-weight:600;font-size:13px;border:0;font-family:inherit;cursor:pointer}
+.pill{display:inline-block;padding:2px 9px;border-radius:99px;font-size:12px;font-weight:600}
+.pr{background:var(--red-t);color:var(--red)}.py{background:var(--amb-t);color:var(--amb)}.pg{background:var(--grn-t);color:var(--grn)}
+.demo{display:grid;grid-template-columns:200px 1fr;gap:18px}
+@media(max-width:720px){.demo{grid-template-columns:1fr}}
+.people{display:flex;flex-direction:column;gap:6px}
+.person{background:var(--card);border:1px solid var(--line);border-radius:10px;padding:7px 10px;font-size:14px;display:flex;justify-content:space-between;transition:.3s}
+.person.used{opacity:.35}
+.tag{font-size:11px;font-weight:700;border-radius:6px;padding:1px 6px;background:var(--yel-t);color:var(--amb)}
+.posts{display:grid;grid-template-columns:repeat(auto-fill,minmax(150px,1fr));gap:8px}
+.post{border:2px dashed var(--line);border-radius:12px;padding:10px;min-height:74px;transition:.3s;background:var(--card)}
+.post small{display:block;color:var(--mut);font-size:11px;text-transform:uppercase;letter-spacing:.06em}
+.post.fill{border:2px solid var(--grn);background:var(--grn-t)}
+.post.rp{border-color:var(--red)}.post.fill.rp{background:var(--red-t);border-color:var(--red)}
+.post.fi.fill{background:var(--yel-t);border-color:var(--yel)}
+.post b{display:block;margin-top:2px;animation:pop .35s}
+@keyframes pop{from{transform:scale(.8);opacity:0}to{transform:none;opacity:1}}
+.leg{display:flex;flex-wrap:wrap;gap:10px;font-size:12px;color:var(--mut);margin-top:12px}
+.leg span::before{content:"";display:inline-block;width:10px;height:10px;border-radius:3px;margin-right:5px;vertical-align:-1px;background:var(--c)}
+.grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:12px}
+.rule{background:var(--card);border:1px solid var(--line);border-radius:16px;padding:16px}
+.rule .ic{width:40px;height:40px;border-radius:12px;display:grid;place-items:center;background:var(--yel-t);font-size:20px;margin-bottom:8px}
+.rule h3{font-size:17px;margin-bottom:4px}.rule p{margin:0;color:var(--mut);font-size:14px}
+.big{font-family:"Space Grotesk";font-size:34px;font-weight:700;color:var(--red)}
+svg{max-width:100%;height:auto;display:block}
+.tl text{fill:var(--fg);font:12px Inter,sans-serif}
+.fi{display:flex;flex-wrap:wrap;gap:8px;align-items:stretch}
+.fi>div{flex:1 1 150px;background:var(--card);border:1px solid var(--line);border-radius:14px;padding:12px;font-size:14px;position:relative}
+.fi>div b{display:block;font-family:"Space Grotesk";font-size:15px}
+.fi .auto{background:var(--grn-t);border-color:transparent}.fi .man{background:var(--yel-t);border-color:transparent}
+.acc details{background:var(--card);border:1px solid var(--line);border-radius:14px;margin-bottom:8px;padding:2px 14px}
+.acc summary{cursor:pointer;padding:12px 0;font-weight:600;display:flex;gap:10px;align-items:center;list-style:none}
+.acc summary::-webkit-details-marker{display:none}
+.acc details p{margin:0 0 14px;color:var(--mut)}.acc details p b{color:var(--fg)}
+.chk{list-style:none;padding:0;margin:0}
+.chk li{display:flex;gap:12px;align-items:flex-start;padding:10px 0;border-bottom:1px solid var(--line)}
+.chk li:last-child{border:0}
+.chk input{width:20px;height:20px;accent-color:var(--grn);margin-top:2px;flex:none}
+.chk input:checked+span{text-decoration:line-through;color:var(--mut)}
+.prog{height:10px;background:var(--line);border-radius:9px;overflow:hidden;margin:6px 0 14px}.prog i{display:block;height:100%;width:0;background:var(--grn);transition:.3s}
+.two{display:grid;grid-template-columns:repeat(auto-fit,minmax(280px,1fr));gap:16px}
+.paper{background:#fff;color:#222;border:1px solid var(--line);border-radius:6px;padding:10px;font-size:10px;aspect-ratio:297/210;box-shadow:var(--shadow);display:grid;grid-template-columns:2fr 1fr;gap:8px}
+.paper div{border:1px solid #ccc;border-radius:4px;padding:6px}
+.paper b{display:block;background:#ffbc0d;color:#222;padding:1px 4px;border-radius:3px;margin-bottom:4px}
+footer{margin-top:48px;color:var(--mut);font-size:13px}
+</style>
+
+</head><body><nav><div class="w" id="nav">
+<a href="#passos">Passo a passo</a><a href="#demo">Experimenta</a><a href="#guia">Guia de pessoas</a><a href="#regras">Regras</a><a href="#fi">Formação</a><a href="#avisos">Avisos</a><a href="#lista">Lista do gerente</a><a href="#imprimir">Imprimir</a>
+</div></nav>
+
+<div class="w">
+<header class="hero">
+<div class="eyebrow">McDonald's Imperial · Gerente Loja</div>
+<h1>Posicionamento Imperial</h1>
+<p class="lead">O módulo que substitui a folha de Excel: lê o horário da semana, diz quantas pessoas o turno precisa e distribui cada colaborador por posto, respeitando as regras da casa.</p>
+<div class="flow">
+<div><b>1</b><strong>Carregar o Excel da semana</strong><br><span style="color:var(--mut);font-size:14px">Uma vez por semana</span></div>
+<div><b>2</b><strong>Abrir o turno</strong><br><span style="color:var(--mut);font-size:14px">Dia + Abertura, Transição ou Fecho</span></div>
+<div><b>3</b><strong>Distribuir e ajustar</strong><br><span style="color:var(--mut);font-size:14px">A app propõe, tu decides</span></div>
+<div><b>4</b><strong>Imprimir A4</strong><br><span style="color:var(--mut);font-size:14px">Folha única para afixar</span></div>
+</div>
+</header>
+
+<section id="passos">
+<h2>Passo a passo</h2>
+<p class="sub">Toca em cada passo para ver o que aparece no ecrã e o que tens de fazer.</p>
+<div class="tabs" role="tablist" id="stepTabs"></div>
+<div class="card step" id="stepBody"></div>
+</section>
+
+<section id="demo">
+<h2>Experimenta: Abertura de uma quarta-feira</h2>
+<p class="sub">Uma versão simplificada do quadro. Carrega em «Distribuir» e vê como a app preenche os postos. Depois toca num posto para o esvaziar.</p>
+<div class="card">
+<div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:14px">
+<button class="btn" id="dist">Distribuir pessoas pelos postos</button>
+<button class="chip" id="reset">Limpar</button>
+<span id="demoMsg" class="pill py" style="align-self:center">Faltam 8 postos</span>
+</div>
+<div class="demo">
+<div><strong style="font-size:13px;color:var(--mut)">DISPONÍVEIS</strong><div class="people" id="people" style="margin-top:8px"></div></div>
+<div><div class="posts" id="posts"></div>
+<div class="leg"><span style="--c:var(--red)">Posto de RP</span><span style="--c:var(--grn)">Posto normal</span><span style="--c:var(--yel)">Formação inicial (automática)</span></div></div>
+</div>
+</div>
+</section>
+
+<section id="guia">
+<h2>O guia: quantas pessoas abrir</h2>
+<p class="sub">Com as vendas da hora de pico, a app diz quantas pessoas o turno pede. Compara sempre com o que posicionaste.</p>
+<div class="two">
+<div class="card">
+<strong>Turnos completos e hora de pico</strong>
+<svg class="tl" viewBox="0 0 520 150" role="img" aria-label="Linha do tempo dos turnos">
+<rect x="10" y="20" width="520" height="2" fill="var(--line)"/>
+<g font-size="11">
+<rect x="10" y="34" width="150" height="26" rx="8" fill="#ffbc0d"/><text x="20" y="51">Abertura 07–14</text>
+<rect x="180" y="68" width="150" height="26" rx="8" fill="var(--red)"/><text x="190" y="85" style="fill:#fff">Transição 15–22</text>
+<rect x="340" y="102" width="170" height="26" rx="8" fill="var(--fg)"/><text x="350" y="119" style="fill:var(--bg)">Fecho 23–06</text>
+</g>
+<g><circle cx="105" cy="21" r="6" fill="var(--red)"/><text x="82" y="12">pico 13h</text>
+<circle cx="275" cy="21" r="6" fill="var(--red)"/><text x="252" y="12">pico 20h</text>
+<circle cx="425" cy="21" r="6" fill="var(--red)"/><text x="402" y="12">pico 00h</text></g>
+</svg>
+<p style="color:var(--mut);font-size:14px;margin:6px 0 0">Para um colaborador contar, tem de estar presente pelo menos <b style="color:var(--fg)">30 min no pico</b>, depois de descontadas as pausas.</p>
+</div>
+<div class="card">
+<strong>Linhas de produção mínimas</strong>
+<div class="grid" style="margin-top:12px;grid-template-columns:repeat(3,1fr)">
+<div class="rule" style="text-align:center"><div class="big">3</div><small>Linha 1 · mín.</small></div>
+<div class="rule" style="text-align:center"><div class="big">7</div><small>Linha 2 · mín.</small></div>
+<div class="rule" style="text-align:center"><div class="big">23</div><small>Linha 3 · mín.</small></div>
+</div>
+<p style="color:var(--mut);font-size:14px;margin:12px 0 0">A faixa mais alta do guia vai até <b style="color:var(--fg)">4 380 €</b> de vendas no pico.</p>
+</div>
+</div>
+</section>
+
+<section id="regras">
+<h2>Regras que a app já considera</h2>
+<p class="sub">Não precisas de as decorar: a distribuição automática e os avisos aplicam-nas por ti.</p>
+<div class="grid">
+<div class="rule"><div class="ic">📅</div><h3>Quem está disponível</h3><p>Só quem tem dia de trabalho (T), não está de férias/baixa e está presente 30 min no pico.</p></div>
+<div class="rule"><div class="ic">🎖️</div><h3>Postos de RP</h3><p>Só RPs ocupam postos de RP, e apenas em Sala Clientes, Balcão Pagamento ou Balcão Entrega.</p></div>
+<div class="rule"><div class="ic">🛵</div><h3>Postos Delivery</h3><p>Preenchidos primeiro com a lista de pessoas de Delivery.</p></div>
+<div class="rule"><div class="ic">🎓</div><h3>Formação inicial</h3><p>Quem está em formação sai do pool normal e o formador fica no posto do formando.</p></div>
+<div class="rule"><div class="ic">⚖️</div><h3>Restantes postos</h3><p>Por cobertura (quem sabe mais postos) e, em empate, por quem entrou mais cedo.</p></div>
+<div class="rule"><div class="ic">🚫</div><h3>Sem duplicados</h3><p>Cada pessoa só pode estar num posto de cada vez.</p></div>
+</div>
+</section>
+
+<section id="fi">
+<h2>Formação inicial automática</h2>
+<p class="sub">O Excel «Mapa Folgas» já diz quem está em formação, a ação e o posto. Tu só escolhes quem dá a formação.</p>
+<div class="card">
+<div class="fi">
+<div class="auto"><small>AUTOMÁTICO</small><b>Pessoa em formação</b>vem do Mapa Folgas</div>
+<div class="auto"><small>AUTOMÁTICO</small><b>Ação e posto</b>ex.: Fritadeira → Fritura</div>
+<div class="man"><small>TU ESCOLHES</small><b>Quem dá a formação</b>treinador, RP ou gerente</div>
+<div class="auto"><small>RESULTADO</small><b>Formador no posto</b>fica junto do formando</div>
+</div>
+<p style="color:var(--mut);font-size:14px;margin:14px 0 0">O botão <b style="color:var(--fg)">🗑</b> remove uma formação que não vai acontecer. Os botões «Limpar» não apagam formações automáticas.</p>
+</div>
+</section>
+
+<section id="avisos">
+<h2>Avisos da app</h2>
+<p class="sub">Filtra por cor. Vermelho é erro de regra, amarelo é para rever, verde está certo.</p>
+<div class="tabs" id="avF">
+<button class="chip on" data-f="all">Todos</button><button class="chip" data-f="r">🔴 Vermelhos</button><button class="chip" data-f="y">🟡 Amarelos</button><button class="chip" data-f="g">🟢 Verdes</button>
+</div>
+<div class="acc" id="av"></div>
+</section>
+
+<section id="lista">
+<h2>Lista de verificação do gerente</h2>
+<p class="sub">Marca à medida que avanças. O progresso fica guardado neste dispositivo.</p>
+<div class="two">
+<div class="card"><strong>Uma vez por semana</strong><div class="prog"><i id="p1"></i></div><ul class="chk" id="c1"></ul></div>
+<div class="card"><strong>Em cada turno</strong><div class="prog"><i id="p2"></i></div><ul class="chk" id="c2"></ul><button class="chip" id="rst" style="margin-top:12px">Recomeçar lista</button></div>
+</div>
+</section>
+
+<section id="imprimir">
+<h2>Imprimir a folha do turno</h2>
+<p class="sub">Uma única folha A4 horizontal, com margens mínimas (3 mm), pronta a afixar.</p>
+<div class="card two" style="align-items:center">
+<div class="paper"><div><b>Quadro de postos · Abertura 11/11</b>Sala · Balcão · Cozinha · Delivery …<br>Gerente de turno · Gerente de serviço · Objetivos</div><div><b>Formação inicial</b>Nome — ação · posto<br>Quem dá: …<br><b style="margin-top:6px">Formação contínua</b>…</div></div>
+<ul style="margin:0;padding-left:18px"><li>Resolve primeiro os avisos a vermelho.</li><li>Usa o botão de impressão da app.</li><li>A lista de formação aparece compacta, à direita.</li></ul>
+</div>
+</section>
+
+<footer>Dúvidas ou algo que não bata certo com o horário? Fala com o gerente de loja antes de imprimir.</footer>
+</div>
+
+<script>
+const $=s=>document.querySelector(s);
+const store={g(k){try{return localStorage.getItem(k)}catch(e){return null}},s(k,v){try{localStorage.setItem(k,v)}catch(e){}}};
+
+/* passos */
+const steps=[
+{t:"1 · Excel",h:"Carregar o ficheiro da semana",l:["Abre <b>Ficheiros</b> e carrega o Excel da semana (Mapa MT, Planeamento Vendas, Mapa Folgas).","Confirma na mensagem as datas e o número de colaboradores.","Em <b>Equipa</b>, liga os nomes sem correspondência."],m:`<div class="row"><span>📄 Semana 47.xlsm</span><span class="pill pg">carregado</span></div><div class="row"><span>101 colaboradores · 7 dias</span><span class="pill pg">OK</span></div><div class="row"><span>2 nomes sem correspondência</span><span class="pill py">ligar</span></div>`},
+{t:"2 · Turno",h:"Abrir o dia e o turno",l:["Em <b>Semana</b>, escolhe o dia.","Escolhe Abertura, Transição ou Fecho.","Preenche gerente de turno, gerente de serviço e objetivos."],m:`<div class="row"><span>Qua 11/11</span><span class="pill py">dia</span></div><div class="tabs" style="margin:6px 0"><span class="chip on">Abertura</span><span class="chip">Transição</span><span class="chip">Fecho</span></div><div class="row"><span>Gerente de turno</span><b>Tiago</b></div>`},
+{t:"3 · Guia",h:"Ler o guia de pessoas",l:["Vê quantas pessoas o turno pede no pico.","Confere as linhas L1, L2 e L3.","Se não há vendas, carrega o Excel ou preenche-as."],m:`<div class="row"><span>Pico 13h</span><b>19 pessoas</b></div><div class="row"><span>L1 ≥ 3 · L2 ≥ 7 · L3 ≥ 23</span><span class="pill pg">ok</span></div>`},
+{t:"4 · Formadores",h:"Escolher quem dá a formação",l:["A pessoa, a ação e o posto já vêm preenchidos.","Escolhe o formador no cartão da formação.","Só treinadores, RPs ou gerentes são válidos."],m:`<div class="row"><span>Pessoa em formação</span><b>Ana</b></div><div class="row"><span>Ação · posto</span><b>Fritadeira · Fritura</b></div><div class="row"><span>Quem dá</span><span class="pill py">escolher ▾</span></div>`},
+{t:"5 · Distribuir",h:"Distribuir e ajustar",l:["Carrega em <b>Distribuir pessoas pelos postos</b>.","Troca nomes, abre postos, confirma RPs.","Acrescenta formação contínua se existir."],m:`<div style="text-align:center;margin-bottom:8px"><span class="btn">Distribuir pessoas pelos postos</span></div><div class="row"><span>Sala Clientes</span><b>Marta (RP)</b></div><div class="row"><span>Fritura</span><b>João</b></div>`},
+{t:"6 · Avisos",h:"Rever avisos e imprimir",l:["Resolve todos os vermelhos.","Revê os amarelos.","Imprime a folha A4."],m:`<div class="row"><span class="pill pg">Guia · equipa igual ao guia</span></div><div class="row"><span class="pill pr">Formação · falta indicar quem dá</span></div><span class="btn">Imprimir folha</span>`}];
+const tb=$("#stepTabs"),sb=$("#stepBody");
+function showStep(i){[...tb.children].forEach((b,j)=>b.setAttribute("aria-selected",j==i));const s=steps[i];sb.innerHTML=`<div><h3>${s.h}</h3><ul>${s.l.map(x=>`<li>${x}</li>`).join("")}</ul></div><div class="mock"><div class="bar"><i></i><i></i><i></i></div>${s.m}</div>`}
+steps.forEach((s,i)=>{const b=document.createElement("button");b.textContent=s.t;b.setAttribute("role","tab");b.onclick=()=>showStep(i);tb.appendChild(b)});showStep(0);
+
+/* demo */
+const ppl=[{n:"Marta",rp:1},{n:"Rui",rp:1},{n:"João"},{n:"Sofia"},{n:"Pedro",d:1},{n:"Inês",d:1},{n:"Carla"},{n:"Bruno"},{n:"Ana",fi:1},{n:"Miguel",tr:1}];
+const posts=[{n:"Sala Clientes",rp:1},{n:"Balcão Pagamento",rp:1},{n:"Delivery 1",d:1},{n:"Delivery 2",d:1},{n:"Fritura"},{n:"Grelha"},{n:"Montagem"},{n:"Bebidas"},{n:"Fritura (formação)",fi:1}];
+let asg={};
+function draw(){
+ const used=new Set(Object.values(asg).map(x=>x.n));
+ $("#people").innerHTML=ppl.map(p=>`<div class="person ${used.has(p.n)?'used':''}"><span>${p.n}</span><span>${p.rp?'<span class="tag">RP</span> ':''}${p.d?'<span class="tag">DELIV</span> ':''}${p.fi?'<span class="tag">FORMANDO</span>':''}${p.tr?'<span class="tag">TREINADOR</span>':''}</span></div>`).join("");
+ $("#posts").innerHTML=posts.map((p,i)=>{const a=asg[i];return `<div class="post ${p.rp?'rp':''} ${p.fi?'fi':''} ${a?'fill':''}" data-i="${i}" style="cursor:${a?'pointer':'default'}"><small>${p.n}</small>${a?`<b>${a.n}</b>`:'<span style="color:var(--mut);font-size:13px">vazio</span>'}</div>`}).join("");
+ const miss=posts.length-Object.keys(asg).length;
+ const m=$("#demoMsg");m.className="pill "+(miss?"py":"pg");m.textContent=miss?`Faltam ${miss} postos`:"Equipa igual ao guia ✓";
+ document.querySelectorAll(".post").forEach(el=>el.onclick=()=>{delete asg[el.dataset.i];draw()});
+}
+function distribute(){
+ asg={};const used=new Set();
+ const take=f=>ppl.find(p=>!used.has(p.n)&&f(p));
+ const put=(i,p)=>{if(p){asg[i]=p;used.add(p.n)}};
+ posts.forEach((p,i)=>{if(p.fi){put(i,ppl.find(x=>x.tr));ppl.find(x=>x.fi);used.add("Ana")}});
+ used.add("Ana");
+ posts.forEach((p,i)=>{if(p.rp)put(i,take(x=>x.rp))});
+ posts.forEach((p,i)=>{if(p.d)put(i,take(x=>x.d))});
+ posts.forEach((p,i)=>{if(!p.rp&&!p.d&&!p.fi)put(i,take(x=>!x.rp&&!x.d&&!x.fi&&!x.tr))});
+ draw();
+}
+$("#dist").onclick=distribute;$("#reset").onclick=()=>{asg={};draw()};draw();
+
+/* avisos */
+const av=[
+["r","RP · sem função RP","Alguém está num posto de RP sem ser RP.","Troca por um RP."],
+["r","RP · zona não permitida","Um RP está fora de Sala Clientes, Balcão Pagamento ou Balcão Entrega.","Muda o RP de posto."],
+["r","Formação · falta indicar quem dá","Falta escolher o formador.","Escolhe-o no cartão da formação."],
+["r","Formação · não pode dar a própria formação","Formando e formador são a mesma pessoa.","Escolhe outro formador."],
+["r","Formação · não é treinador, RP nem gestão","O formador escolhido não pode dar formação.","Escolhe um treinador, RP ou gerente."],
+["r","Repetido","O mesmo colaborador está em mais do que um posto.","Deixa-o só num posto."],
+["y","Vendas · sem vendas na hora de pico","Não há vendas previstas para o pico, por isso o guia não dá número.","Carrega o Excel em Ficheiros ou preenche as vendas."],
+["y","Guia · faltam N / N a mais","Estão posicionadas menos ou mais pessoas do que o guia pede.","Posiciona mais gente, usa «Distribuir» ou liberta pessoas."],
+["y","Atenção · postos fora do guia","Há postos ocupados que o guia não pede.","É permitido; confirma que é intencional."],
+["y","Vendas lidas para outras datas","O Excel de vendas e o horário são de semanas diferentes.","Carrega o Excel certo."],
+["g","Guia · equipa igual ao guia","Tudo certo.","Nada a fazer."]];
+const cl={r:["pr","Vermelho"],y:["py","Amarelo"],g:["pg","Verde"]};
+function drawAv(f){$("#av").innerHTML=av.filter(a=>f=="all"||a[0]==f).map(a=>`<details><summary><span class="pill ${cl[a[0]][0]}">${cl[a[0]][1]}</span>${a[1]}</summary><p><b>Quer dizer:</b> ${a[2]}<br><b>O que fazer:</b> ${a[3]}</p></details>`).join("")}
+document.querySelectorAll("#avF .chip").forEach(b=>b.onclick=()=>{document.querySelectorAll("#avF .chip").forEach(x=>x.classList.remove("on"));b.classList.add("on");drawAv(b.dataset.f)});drawAv("all");
+
+/* checklists */
+const L={c1:["Carregar o Excel da semana em Ficheiros","Confirmar datas e nº de colaboradores na mensagem","Ligar nomes sem correspondência em Equipa"],
+c2:["Abrir o dia e o turno certos em Semana","Preencher gerente de turno, de serviço e objetivos","Ler o guia: pessoas e linhas L1, L2, L3","Escolher o formador de cada formação inicial","Distribuir pessoas pelos postos","Ajustar: trocar nomes, abrir postos, confirmar RPs","Acrescentar formação contínua, se existir","Resolver vermelhos e rever amarelos","Imprimir a folha A4 e afixar"]};
+function mk(id,pid){const ul=$("#"+id),saved=JSON.parse(store.g("gpi_"+id)||"[]");
+ ul.innerHTML=L[id].map((t,i)=>`<li><input type="checkbox" id="${id}${i}" ${saved[i]?"checked":""}><label for="${id}${i}" style="flex:1"><span>${t}</span></label></li>`).join("");
+ const upd=()=>{const v=[...ul.querySelectorAll("input")].map(x=>x.checked);store.s("gpi_"+id,JSON.stringify(v));$("#"+pid).style.width=(100*v.filter(Boolean).length/v.length)+"%"};
+ ul.onchange=upd;upd()}
+mk("c1","p1");mk("c2","p2");
+$("#rst").onclick=()=>{["c1","c2"].forEach(k=>store.s("gpi_"+k,"[]"));mk("c1","p1");mk("c2","p2")};
+
+/* nav highlight */
+const links=[...document.querySelectorAll("#nav a")];
+const io=new IntersectionObserver(es=>es.forEach(e=>{if(e.isIntersecting)links.forEach(l=>l.classList.toggle("on",l.getAttribute("href")=="#"+e.target.id))}),{rootMargin:"-40% 0px -55% 0px"});
+document.querySelectorAll("section").forEach(s=>io.observe(s));
+</script>
+</body></html>
